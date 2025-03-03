@@ -1,13 +1,13 @@
 {
   "name": "karmada-dashboard-ui",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "ui for karmada dashboard",
   "scripts": {
     "dashboard:dev": "turbo dev --filter @karmada/dashboard",
     "demos:dev": "turbo dev --filter @karmada/demos",
     "dashboard:build": "turbo build --filter @karmada/dashboard",
-    "prepare": "cd .. && husky install ui/.husky"
+    "prepare": "cd .. && husky install ui/.husky",
+    "build": "turbo build"
   },
   "engines": {
     "node": ">=18.14.0"
