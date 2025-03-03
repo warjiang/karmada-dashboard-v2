@@ -7,7 +7,9 @@
     "demos:dev": "turbo dev --filter @karmada/demos",
     "dashboard:build": "turbo build --filter @karmada/dashboard",
     "prepare": "cd .. && husky install ui/.husky",
-    "build": "turbo build"
+    "build": "turbo build",
+    "ci:version": "changeset version && pnpm install --no-frozen-lockfile",
+    "ci:publish": "pnpm publish -r && changeset tag"
   },
   "engines": {
     "node": ">=18.14.0"
