@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { FC ,ReactNode, useState} from 'react';
+import { FC, ReactNode } from 'react';
 import { Layout as AntdLayout } from 'antd';
 import { Outlet, Navigate } from 'react-router-dom';
 import Header from './header';
@@ -22,9 +22,9 @@ import Sidebar from './sidebar';
 import { cn } from '@/utils/cn.ts';
 import { useAuth } from '@/components/auth';
 import { getSidebarWidth } from '@/utils/i18n';
-import { useWindowSize } from "@uidotdev/usehooks";
-import TerminalPopup from '@packages/terminal/TerminalPopup'; 
-import  Navigation  from '@/components/navigation';
+import { useWindowSize } from '@uidotdev/usehooks';
+import TerminalPopup from '@packages/terminal/TerminalPopup';
+import { useGlobalStore } from '@/contexts/global.tsx';
 
 const { Sider: AntdSider, Content: AntdContent } = AntdLayout;
 
@@ -32,8 +32,12 @@ export const MainLayout: FC = () => {
   const { authenticated } = useAuth();
   const { width } = useWindowSize();
   const isSmallScreen = width !== null && width <= 768;
-  const [isTerminalOpen, setIsTerminalOpen] = useState(false);
-
+  const { isTerminalOpen, setIsTerminalOpen } = useGlobalStore((state) => {
+    return {
+      isTerminalOpen: state.isTerminalOpen,
+      setIsTerminalOpen: state.setIsTerminalOpen,
+    };
+  });
   if (!authenticated) {
     return <Navigate to="/login" />;
   }
@@ -41,7 +45,9 @@ export const MainLayout: FC = () => {
   return (
     <>
       <Header />
-      <AntdLayout className={cn('h-[calc(100vh-48px)]', 'overflow-hidden', 'flex')}>
+      <AntdLayout
+        className={cn('h-[calc(100vh-48px)]', 'overflow-hidden', 'flex')}
+      >
         <AntdSider
           width={getSidebarWidth()}
           collapsible
@@ -51,14 +57,12 @@ export const MainLayout: FC = () => {
         >
           <Sidebar collapsed={isSmallScreen} />
         </AntdSider>
-        <AntdContent >
+        <AntdContent>
           <Outlet />
         </AntdContent>
       </AntdLayout>
-      <Navigation onTerminalClick={() => setIsTerminalOpen(true)} />
-      
+
       {/* Your main content, which can be rendered via <Outlet /> or otherwise */}
-      
 
       {/* Render the terminal once at the layout level */}
       <TerminalPopup

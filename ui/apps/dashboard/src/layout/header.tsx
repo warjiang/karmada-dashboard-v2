@@ -15,10 +15,21 @@ limitations under the License.
 */
 
 import Navigation from '@/components/navigation';
+import { useGlobalStore } from '@/contexts/global.tsx';
 const Header = () => {
+  const { isTerminalOpen, setIsTerminalOpen } = useGlobalStore((state) => {
+    return {
+      isTerminalOpen: state.isTerminalOpen,
+      setIsTerminalOpen: state.setIsTerminalOpen,
+    };
+  });
   return (
     <>
-      <Navigation />
+      <Navigation
+        onTerminalClick={() => {
+          setIsTerminalOpen(!isTerminalOpen);
+        }}
+      />
     </>
   );
 };
