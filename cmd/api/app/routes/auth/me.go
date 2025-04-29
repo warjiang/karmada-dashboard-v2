@@ -58,7 +58,7 @@ func getUserFromToken(token string) *v1.User {
 
 	found, value := traverse(tokenServiceAccountKey, claims)
 	if !found {
-		return &v1.User{Authenticated: true}
+		return &v1.User{Name: "fake-admin", Authenticated: true}
 	}
 
 	var sa v1.ServiceAccount
