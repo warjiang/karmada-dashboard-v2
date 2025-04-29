@@ -36,22 +36,14 @@ const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({
 
   useEffect(() => {
     if (isOpen && containerRef.current) {
+      const tokenUrlTemplate =
+        '/api/v1/terminal/pod/{{namespace}}/{{pod}}/shell/{{container}}';
+      const replacedUrl = tokenUrlTemplate
+        .replace('{{namespace}}', 'karmada-system')
+        .replace('{{pod}}', 'karmada-ttyd-admin')
+        .replace('{{container}}', 'karmada-ttyd-admin');
       // Define your terminal options:
       // Make an API call to trigger the terminal setup
-      fetch('/api/v1/terminal')
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error('Failed to trigger terminal');
-          }
-          return response.json();
-        })
-        .then((data) => {
-          console.log('Terminal triggered:', data);
-          // Proceed with initializing the terminal UI
-        })
-        .catch((error) => {
-          console.error('Error triggering terminal:', error);
-        });
       const terminalOptions: BaseTerminalOptions = {
         // Options for xterm.js instance
         xtermOptions: {
@@ -80,10 +72,11 @@ const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({
       };
 
       // Define the Ttyd-specific options for the WebSocket connection
+
       const ttydOptions = {
-        wsUrl: 'ws://localhost:5173/terminal', // Adjust with your ttyd endpoint
-        tokenUrl:
-          'https://karmada-apiserver.karmada-system.svc.cluster.local:5443', // Adjust with your token API endpoint
+        // api/v1/terminal/sockjs
+        wsUrl: `/api/v1/terminal/sockjs`, // Adjust with your ttyd endpoint
+        tokenUrl: replacedUrl, // Adjust with your token API endpoint
         flowControl: {
           limit: 10000,
           highWater: 50,
@@ -105,8 +98,6 @@ const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({
 
       // Connect to the ttyd backend via WebSocket
       ttydTerminalRef.current.connect();
-
-      // Optionally, you can add more configuration or event listeners here
 
       return () => {
         // Dispose of the terminal when the component unmounts or is closed

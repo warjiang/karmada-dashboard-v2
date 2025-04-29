@@ -23,8 +23,8 @@ import { cn } from '@/utils/cn.ts';
 import { useAuth } from '@/components/auth';
 import { getSidebarWidth } from '@/utils/i18n';
 import { useWindowSize } from '@uidotdev/usehooks';
-import TerminalPopup from '@packages/terminal/TerminalPopup';
 import { useGlobalStore } from '@/contexts/global.tsx';
+import Terminal from '@/components/terminal';
 
 const { Sider: AntdSider, Content: AntdContent } = AntdLayout;
 
@@ -38,6 +38,7 @@ export const MainLayout: FC = () => {
       setIsTerminalOpen: state.setIsTerminalOpen,
     };
   });
+
   if (!authenticated) {
     return <Navigate to="/login" />;
   }
@@ -65,9 +66,20 @@ export const MainLayout: FC = () => {
       {/* Your main content, which can be rendered via <Outlet /> or otherwise */}
 
       {/* Render the terminal once at the layout level */}
+      {/*
       <TerminalPopup
         isOpen={isTerminalOpen}
         onClose={() => setIsTerminalOpen(false)}
+      />
+      */}
+      <Terminal
+        isOpen={isTerminalOpen}
+        onClose={() => setIsTerminalOpen(false)}
+        terminalOptions={{
+          namespace: 'karmada-system',
+          pod: 'karmada-ttyd-admin',
+          container: 'karmada-ttyd-admin',
+        }}
       />
     </>
   );

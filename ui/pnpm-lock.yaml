@@ -44,6 +44,9 @@ importers:
       '@karmada/i18n-tool':
         specifier: workspace:*
         version: link:../../packages/i18n-tool
+      '@karmada/terminal':
+        specifier: workspace:*
+        version: link:../../packages/terminal
       '@karmada/utils':
         specifier: workspace:*
         version: link:../../packages/utils
