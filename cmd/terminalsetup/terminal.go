@@ -184,6 +184,31 @@ func createTTYdPod(ctx context.Context, clientset kubernetes.Interface) (*corev1
 	return created, nil
 }
 
+type TerminalResponse struct {
+	ID string `json:"id"`
+}
+
+func handleExecShell(c *gin.Context) {
+	sessionID, err := genTerminalSessionId()
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	cfg, _, err := client.GetKubeConfig()
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+
+	terminalSessions.Set(sessionID, TerminalSession{
+		id:       sessionID,
+		bound:    make(chan error),
+		sizeChan: make(chan remotecommand.TerminalSize),
+	})
+	go WaitForTerminal(client.InClusterClient(), cfg, c, sessionID)
+	common.Success(c, TerminalResponse{ID: sessionID})
+}
+
 // GenerateKubeConfig builds an in-memory kubeconfig with the provided token.
 func GenerateKubeConfig(token string) ([]byte, error) {
 	cfg := clientcmdapi.Config{
@@ -379,26 +404,38 @@ func TriggerTerminal(c *gin.Context) {
 }
 
 func CreateTtydPod(c *gin.Context) {
+	// [todo] parse login user form request
+	// assume that login user is admin
+	loginUserName := "admin"
+
 	k8sClient := client.InClusterClient()
 	if k8sClient == nil {
 		common.Fail(c, fmt.Errorf("failed to initialize Kubernetes client"))
 		return
 	}
 	// podName: karmada-ttyd-${username}
+	podName := fmt.Sprintf("karmada-ttyd-%s", loginUserName)
+	containerName := podName
+	containerPort := int32(7681)
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "karmada-ttyd-admin",
+			Name:      podName,
 			Namespace: "karmada-system",
 		},
 		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup:   pointer.Int64(1000),
+				RunAsUser: pointer.Int64(1000),
+			},
 			Containers: []corev1.Container{
 				{
 					Image:           "sayem4604/ttyd",
 					ImagePullPolicy: corev1.PullIfNotPresent,
-					Name:            "karmada-ttyd-admin",
+					Name:            containerName,
+					WorkingDir:      "/home/ttyd",
 					Ports: []corev1.ContainerPort{
 						{
-							ContainerPort: 7681,
+							ContainerPort: containerPort,
 							Name:          "tcp",
 							Protocol:      "TCP",
 						},
@@ -410,7 +447,7 @@ func CreateTtydPod(c *gin.Context) {
 						SuccessThreshold:    1,
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(7681),
+								Port: intstr.FromInt32(containerPort),
 							},
 						},
 						TimeoutSeconds: 10,
@@ -422,7 +459,7 @@ func CreateTtydPod(c *gin.Context) {
 						SuccessThreshold:    1,
 						ProbeHandler: corev1.ProbeHandler{
 							TCPSocket: &corev1.TCPSocketAction{
-								Port: intstr.FromInt32(7681),
+								Port: intstr.FromInt32(containerPort),
 							},
 						},
 						TimeoutSeconds: 10,

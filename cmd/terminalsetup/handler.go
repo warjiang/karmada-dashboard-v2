@@ -17,6 +17,7 @@ limitations under the License.
 package terminalsetup
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 )
 
@@ -24,5 +25,8 @@ import (
 func Init() {
 	r := router.V1()
 	r.GET("/terminal", TriggerTerminal)
-	r.POST("/createTerminal", CreateTtydPod)
+	r.POST("/terminal/init", CreateTtydPod)
+
+	r.GET("/terminal/pod/:namespace/:pod/shell/:container", handleExecShell)
+	r.Any("/terminal/sockjs/*w", gin.WrapH(CreateAttachHandler("/api/v1/terminal/sockjs")))
 }
