@@ -15,7 +15,7 @@ limitations under the License.
 */
 import React, { useEffect, useRef } from 'react';
 //import { Terminal } from '@xterm/xterm';
-import '@xterm/xterm/css/xterm.css';// Import xterm styles
+import '@xterm/xterm/css/xterm.css'; // Import xterm styles
 //import { FitAddon } from '@xterm/addon-fit';
 import BaseTerminal from './base.ts';
 import { BaseTerminalOptions } from './typing';
@@ -26,7 +26,10 @@ interface TerminalPopupProps {
   onClose: () => void;
 }
 
-const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({ isOpen, onClose }) => {
+const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalInstanceRef = useRef<BaseTerminal | null>(null);
   const ttydTerminalRef = useRef<TtydTerminal | null>(null);
@@ -34,21 +37,21 @@ const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({ isOpen, onClose }
   useEffect(() => {
     if (isOpen && containerRef.current) {
       // Define your terminal options:
-     // Make an API call to trigger the terminal setup
-     fetch('/api/v1/terminal')
-     .then(response => {
-       if (!response.ok) {
-         throw new Error('Failed to trigger terminal');
-       }
-       return response.json();
-     })
-     .then(data => {
-       console.log('Terminal triggered:', data);
-       // Proceed with initializing the terminal UI
-     })
-     .catch(error => {
-       console.error('Error triggering terminal:', error);
-     });      
+      // Make an API call to trigger the terminal setup
+      fetch('/api/v1/terminal')
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Failed to trigger terminal');
+          }
+          return response.json();
+        })
+        .then((data) => {
+          console.log('Terminal triggered:', data);
+          // Proceed with initializing the terminal UI
+        })
+        .catch((error) => {
+          console.error('Error triggering terminal:', error);
+        });
       const terminalOptions: BaseTerminalOptions = {
         // Options for xterm.js instance
         xtermOptions: {
@@ -59,35 +62,34 @@ const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({ isOpen, onClose }
           cols: 80,
           theme: {
             background: '#1e1e1e',
-            foreground: '#ffffff'
+            foreground: '#ffffff',
           },
         },
         // Client-specific options such as renderer type
         clientOptions: {
-          rendererType: "webgl",
+          rendererType: 'webgl',
           disableLeaveAlert: false,
           disableResizeOverlay: false,
           enableZmodem: false,
           enableSixel: false,
           enableTrzsz: false,
           trzszDragInitTimeout: 5000, // Example timeout value
-          isWindows: false,         // Set this based on the OS
-          unicodeVersion: "11"      // Unicode version as a string
+          isWindows: false, // Set this based on the OS
+          unicodeVersion: '11', // Unicode version as a string
         },
       };
 
-
       // Define the Ttyd-specific options for the WebSocket connection
       const ttydOptions = {
-        wsUrl: 'ws://localhost:7681/ws', // Adjust with your ttyd endpoint
-        tokenUrl: 'https://karmada-apiserver.karmada-system.svc.cluster.local:5443', // Adjust with your token API endpoint
+        wsUrl: 'ws://localhost:5173/terminal', // Adjust with your ttyd endpoint
+        tokenUrl:
+          'https://karmada-apiserver.karmada-system.svc.cluster.local:5443', // Adjust with your token API endpoint
         flowControl: {
           limit: 10000,
           highWater: 50,
           lowWater: 10,
         },
-      };      
-
+      };
 
       // Create a new TtydTerminal instance
       ttydTerminalRef.current = new TtydTerminal(terminalOptions, ttydOptions);
@@ -101,9 +103,8 @@ const AdvancedTerminalPopup: React.FC<TerminalPopupProps> = ({ isOpen, onClose }
         // Note: TtydTerminal.sendData internally sends data via WebSocket
       });
 
-
       // Connect to the ttyd backend via WebSocket
-      ttydTerminalRef.current.connect();      
+      ttydTerminalRef.current.connect();
 
       // Optionally, you can add more configuration or event listeners here
 

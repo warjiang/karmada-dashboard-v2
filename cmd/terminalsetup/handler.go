@@ -20,12 +20,9 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 )
 
-
-
 // Init initializes the terminal routes
 func Init() {
 	r := router.V1()
 	r.GET("/terminal", TriggerTerminal)
+	r.POST("/createTerminal", CreateTtydPod)
 }
-
-

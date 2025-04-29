@@ -52,8 +52,12 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     resolve: {
-      alias: [{ find: '@', replacement: path.resolve(__dirname, 'src') },
-        { find: '@packages/terminal', replacement: path.resolve(__dirname, '../../packages/terminal/src') }
+      alias: [
+        { find: '@', replacement: path.resolve(__dirname, 'src') },
+        {
+          find: '@packages/terminal',
+          replacement: path.resolve(__dirname, '../../packages/terminal/src'),
+        },
       ],
     },
     server: {
@@ -65,6 +69,12 @@ export default defineConfig(({ mode }) => {
             // cookie: env.VITE_COOKIES,
             // Authorization: `Bearer ${env.VITE_TOKEN}`
           },
+        },
+        '^/terminal': {
+          target: 'ws://localhost:8000',
+          changeOrigin: false,
+          secure: false,
+          ws: true,
         },
       },
     },
