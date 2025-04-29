@@ -62,6 +62,12 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
+        '^/api/v1/terminal/sockjs*': {
+          target: 'ws://localhost:8000',
+          changeOrigin: false,
+          secure: false,
+          ws: true,
+        },
         '^/api/v1.*': {
           target: 'http://localhost:8000',
           changeOrigin: true,
@@ -69,12 +75,6 @@ export default defineConfig(({ mode }) => {
             // cookie: env.VITE_COOKIES,
             // Authorization: `Bearer ${env.VITE_TOKEN}`
           },
-        },
-        '^/terminal': {
-          target: 'ws://localhost:8000',
-          changeOrigin: false,
-          secure: false,
-          ws: true,
         },
       },
     },
