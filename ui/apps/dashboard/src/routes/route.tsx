@@ -44,6 +44,7 @@ import { BuildInAddon, ThridPartyAddon } from '@/pages/addon';
 import ClusterManage from '@/pages/cluster-manage';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
+import McpPage from "@/pages/mcp";
 
 export interface IRouteObjectHandle {
   icon?: ReactNode;
@@ -291,9 +292,13 @@ export function getRoutes() {
       ],
     },
     {
+      path: '/mcp',
+      element: <McpPage/>,
+    },
+    {
       path: '/login',
-      errorElement: <ErrorBoundary />,
-      element: <Login />,
+      errorElement: <ErrorBoundary/>,
+      element: <Login/>,
     },
   ];
 

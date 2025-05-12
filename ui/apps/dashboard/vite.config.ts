@@ -54,6 +54,9 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: [{ find: '@', replacement: path.resolve(__dirname, 'src') }],
     },
+    optimizeDeps: {
+      include: ["@modelcontextprotocol/sdk/client"]
+    },
     server: {
       proxy: {
         '^/api/v1.*': {
@@ -64,7 +67,11 @@ export default defineConfig(({ mode }) => {
             // Authorization: `Bearer ${env.VITE_TOKEN}`
           },
         },
+        '^/mcp/.*': {
+          target: 'http://localhost:1234',
+          changeOrigin: true,
+        }
       },
     },
   };
-});
+})
