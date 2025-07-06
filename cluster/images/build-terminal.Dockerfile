@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG KARMADACTL_VERSION=v1.13.2
+ARG KUBECTL_VERSION=v1.25.0
+
 # Use the official ttyd image as the base
 FROM tsl0922/ttyd:1.7.7
 
@@ -26,16 +29,15 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 
 # Download and install kubectl
-RUN curl -LO https://dl.k8s.io/release/v1.25.0/bin/linux/amd64/kubectl \
+RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl \
   && mv kubectl /usr/local/bin/kubectl \
   && chmod +x /usr/local/bin/kubectl
 
-# Define ARG for karmadactl version (default to latest v1.13.2)
-ARG KARMADA_VERSION=v1.13.2
+
 
 # Download and install karmadactl using the version ARG
 RUN curl -L -o /tmp/karmadactl-linux-amd64.tgz \
-    https://github.com/karmada-io/karmada/releases/download/${KARMADA_VERSION}/karmadactl-linux-amd64.tgz \
+    https://github.com/karmada-io/karmada/releases/download/${KARMADACTL_VERSION}/karmadactl-linux-amd64.tgz \
     && tar -xzf /tmp/karmadactl-linux-amd64.tgz -C /tmp \
     && mv /tmp/karmadactl /usr/local/bin/karmadactl \
     && chmod +x /usr/local/bin/karmadactl \
