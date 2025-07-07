@@ -17,6 +17,7 @@ FROM tsl0922/ttyd:1.7.7
 
 ARG KARMADACTL_VERSION=v1.13.2
 ARG KUBECTL_VERSION=v1.25.0
+ARG TARGETARCH
 
 # Switch to root so we can install packages or make changes
 USER root
