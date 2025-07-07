@@ -5,11 +5,11 @@ on:
     inputs:
       KARMADACTL_VERSION:
         description: 'karmadactl version'
-        required: true
+        default: 'v1.13.2'
         type: string
       KUBECTL_VERSION:
         description: 'kubectl version'
-        required: true
+        default: 'v1.25.0'
         type: string
 
 permissions:
