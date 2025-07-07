@@ -55,7 +55,7 @@ jobs:
           # tags: ${{ steps.misc.outputs.image_name }}:${{ github.ref_name }}
           tags: ${{ steps.misc.outputs.image_name }}:latest
           platforms: ${{ steps.misc.outputs.platforms }}
-          build-args:
-          - KARMADACTL_VERSION: ${{ steps.misc.outputs.karmadactl_version }}
-          - KUBECTL_VERSION: ${{ steps.misc.outputs.kubectl_version }}
+          build-args: |
+            KARMADACTL_VERSION=${{ steps.misc.outputs.karmadactl_version }}
+            KUBECTL_VERSION=${{ steps.misc.outputs.kubectl_version }}
 

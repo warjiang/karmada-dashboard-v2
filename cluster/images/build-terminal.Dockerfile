@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG KARMADACTL_VERSION=v1.13.2
-ARG KUBECTL_VERSION=v1.25.0
-
 # Use the official ttyd image as the base
 FROM tsl0922/ttyd:1.7.7
+
+ARG KARMADACTL_VERSION=v1.13.2
+ARG KUBECTL_VERSION=v1.25.0
 
 # Switch to root so we can install packages or make changes
 USER root
