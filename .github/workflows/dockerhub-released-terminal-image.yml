@@ -52,7 +52,8 @@ jobs:
           file: "cluster/images/build-terminal.Dockerfile"
           context: "."
           push: true
-          tags: ${{ steps.misc.outputs.image_name }}:${{ github.ref_name }}
+          # tags: ${{ steps.misc.outputs.image_name }}:${{ github.ref_name }}
+          tags: ${{ steps.misc.outputs.image_name }}:latest
           platforms: ${{ steps.misc.outputs.platforms }}
           build-args: |
             KARMADACTL_VERSION=${{ steps.misc.outputs.karmadactl_version }}
