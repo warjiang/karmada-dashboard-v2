@@ -27,9 +27,10 @@ USER root
 #RUN apt-get update && apt-get install -y curl
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+RUN echo "KUBECTL_VERSION: ${KUBECTL_VERSION}; KARMADACTL_VERSION:${KARMADACTL_VERSION} TARGETARCH:${TARGETARCH}"
 
 # Download and install kubectl
-RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl \
+RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl \
   && mv kubectl /usr/local/bin/kubectl \
   && chmod +x /usr/local/bin/kubectl
 
@@ -37,14 +38,12 @@ RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubect
 
 # Download and install karmadactl using the version ARG
 #https://github.com/karmada-io/karmada/releases/download/v1.13.2/karmadactl-linux-amd64.tgz
-RUN curl -L -o /tmp/karmadactl-linux-amd64.tgz \
-    https://github.com/karmada-io/karmada/releases/download/${KARMADACTL_VERSION}/karmadactl-linux-amd64.tgz \
-    && echo "download url: https://github.com/karmada-io/karmada/releases/download/${KARMADACTL_VERSION}/karmadactl-linux-amd64.tgz " \
-    && cat /tmp/karmadactl-linux-amd64.tgz \
-    && tar -xzf /tmp/karmadactl-linux-amd64.tgz -C /tmp \
+RUN curl -L -o /tmp/karmadactl-linux-${TARGETARCH}.tgz \
+    https://github.com/karmada-io/karmada/releases/download/${KARMADACTL_VERSION}/karmadactl-linux-${TARGETARCH}.tgz \
+    && tar -xzf /tmp/karmadactl-linux-${TARGETARCH}.tgz -C /tmp \
     && mv /tmp/karmadactl /usr/local/bin/karmadactl \
     && chmod +x /usr/local/bin/karmadactl \
-    && rm /tmp/karmadactl-linux-amd64.tgz
+    && rm /tmp/karmadactl-linux-${TARGETARCH}.tgz
 
 # Create a new non-root user 'ttyd'
 RUN useradd -m ttyd
