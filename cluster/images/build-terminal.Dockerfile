@@ -36,8 +36,10 @@ RUN curl -LO https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubect
 
 
 # Download and install karmadactl using the version ARG
+#https://github.com/karmada-io/karmada/releases/download/v1.13.2/karmadactl-linux-amd64.tgz
 RUN curl -L -o /tmp/karmadactl-linux-amd64.tgz \
     https://github.com/karmada-io/karmada/releases/download/${KARMADACTL_VERSION}/karmadactl-linux-amd64.tgz \
+    && echo "download url: https://github.com/karmada-io/karmada/releases/download/${KARMADACTL_VERSION}/karmadactl-linux-amd64.tgz " \
     && cat /tmp/karmadactl-linux-amd64.tgz \
     && tar -xzf /tmp/karmadactl-linux-amd64.tgz -C /tmp \
     && mv /tmp/karmadactl /usr/local/bin/karmadactl \
