@@ -141,10 +141,10 @@ jobs:
 
   build-and-push-terminal:
     name: build and push terminal image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+    #if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     env:
-      IMAGE_NAME: karmada/karmada-dashboard-terminal
+      IMAGE_NAME: warjiang/karmada-dashboard-terminal
       PLATFORMS: linux/amd64,linux/arm64
       # currently with hard-code version, maybe optimize in the future
       KARMADACTL_VERSION: 'v1.14.1'
