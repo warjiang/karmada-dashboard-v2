@@ -31,7 +31,8 @@ const KarmadaTerminal: React.FC<KarmadaTerminalProps> = ({
   const containerTerminalRef = useRef<ContainerTerminal | null>(null);
 
   useEffect(() => {
-    if (!isOpen || !containerRef.current) return;
+    if (!isOpen || !containerRef.current || containerTerminalRef.current)
+      return;
     // async-await function to simplify the code
     void (async () => {
       // create(only if the terminal pod not exist) + inject
@@ -86,17 +87,6 @@ const KarmadaTerminal: React.FC<KarmadaTerminalProps> = ({
           console.error('get sessionId error', err);
         });
     })();
-
-    return () => {
-      // containerTerminalRef.current?.dispose();
-      // containerTerminalRef.current = null;
-      //if (sock) sock.close();
-      //sock.onclose   = () => console.log('SockJS CLOSED');
-      // if (sock) {
-      //   sock.close(); // Close the WebSocket connection properly
-      //   sock.onclose = () => console.log('SockJS CLOSED');
-      // }
-    };
   }, [isOpen]);
 
   return (
