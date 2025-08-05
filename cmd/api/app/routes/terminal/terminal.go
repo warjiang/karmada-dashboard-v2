@@ -113,7 +113,7 @@ func createTTYdPod(ctx context.Context, clientset kubernetes.Interface, user *v1
 			Containers: []corev1.Container{
 				{
 					Name:            "ttyd",
-					Image:           "karmada/karmada-dashboard-terminal:latest",
+					Image:           "devarsh10/karmada-terminal:latest",
 					ImagePullPolicy: corev1.PullIfNotPresent,
 					//  ◀️ Set this per‑container
 					SecurityContext: &corev1.SecurityContext{
