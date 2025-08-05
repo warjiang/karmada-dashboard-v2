@@ -71,6 +71,12 @@ export default defineConfig(({ mode }) => {
             // Authorization: `Bearer ${env.VITE_TOKEN}`
           },
         },
+        '^/ws*': {
+          target: 'ws://localhost:7681',
+          changeOrigin: false,
+          secure: false,
+          ws: true,
+        },
       },
     },
   };

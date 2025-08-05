@@ -15,8 +15,7 @@ limitations under the License.
 */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { ContainerTerminal, BaseTerminalOptions } from '@karmada/terminal';
-import { CreateKarmadaTerminal } from '@/services/terminal.ts';
+import { BaseTerminalOptions, TtydTerminal } from '@karmada/terminal';
 import { Button, Spin } from 'antd';
 import { Icons } from '@/components/icons';
 
@@ -29,68 +28,58 @@ const KarmadaTerminal: React.FC<KarmadaTerminalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const containerTerminalRef = useRef<ContainerTerminal | null>(null);
+  const ttydRef = useRef<HTMLDivElement | null>(null);
+  const ttydTerminalRef = useRef<TtydTerminal | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (!isOpen || !containerRef.current || containerTerminalRef.current) {
+    if (!isOpen || !ttydRef.current || ttydTerminalRef.current) {
       return;
     }
-    // async-await function to simplify the code
-    void (async () => {
-      setIsLoading(true);
-      // create(only if the terminal pod not exist) + inject
-      const terminalData = await CreateKarmadaTerminal();
-      const { namespace, podName, container } = terminalData.data;
+    setIsLoading(true);
+    // Terminal options
+    const terminalOptions: BaseTerminalOptions = {
+      xtermOptions: {
+        cursorBlink: true,
+        scrollback: 1000,
+        fontSize: 14,
+        // rows: 24,
+        // cols: 80,
+        theme: {
+          background: '#1e1e1e',
+          foreground: '#ffffff',
+        },
+      },
+      clientOptions: {
+        rendererType: 'webgl',
+        disableLeaveAlert: false,
+        disableResizeOverlay: false,
+        enableZmodem: false,
+        enableSixel: false,
+        enableTrzsz: true,
+        trzszDragInitTimeout: 5000,
+        isWindows: false,
+        unicodeVersion: '11',
+      },
+    };
+    // 3) Initialize and connect your TtydTerminal
 
-      // Terminal options
-      const terminalOptions: BaseTerminalOptions = {
-        xtermOptions: {
-          cursorBlink: true,
-          scrollback: 1000,
-          fontSize: 14,
-          // rows: 24,
-          // cols: 80,
-          theme: {
-            background: '#1e1e1e',
-            foreground: '#ffffff',
-          },
-        },
-        clientOptions: {
-          rendererType: 'webgl',
-          disableLeaveAlert: false,
-          disableResizeOverlay: false,
-          enableZmodem: false,
-          enableSixel: false,
-          enableTrzsz: false,
-          trzszDragInitTimeout: 5000,
-          isWindows: false,
-          unicodeVersion: '11',
-        },
-      };
-      // 3) Initialize and connect your TtydTerminal
-      const terminal = new ContainerTerminal(terminalOptions, {
-        namespace,
-        pod: podName,
-        container,
-        sessionIdUrl:
-          '/api/v1/terminal/pod/{{namespace}}/{{pod}}/shell/{{container}}',
-        wsUrl: '/api/v1/terminal/sockjs',
-      });
-      containerTerminalRef.current = terminal;
-      terminal
-        .getSessionId()
-        .then(() => {
-          terminal.open(containerRef.current!);
-          terminal.connect();
-          setIsLoading(false);
-        })
-        .catch((err) => {
-          console.error('get sessionId error', err);
-          setIsLoading(false);
-        });
-    })();
+    const wsUrl = 'ws://localhost:5173/ws';
+    const tokenUrl = 'http://localhost:5173/token';
+    const terminal = new TtydTerminal(terminalOptions, {
+      tokenUrl,
+      wsUrl,
+      flowControl: {
+        limit: 100000,
+        highWater: 10,
+        lowWater: 4,
+      },
+    });
+    ttydTerminalRef.current = terminal;
+
+    terminal.open(ttydRef.current);
+    terminal.connect();
+    setIsLoading(false);
   }, [isOpen, setIsLoading]);
 
   return (
@@ -138,7 +127,7 @@ const KarmadaTerminal: React.FC<KarmadaTerminalProps> = ({
         ></Button>
       </div>
       <div
-        ref={containerRef}
+        ref={ttydRef}
         style={{
           width: '100%',
           height: 'calc(100% - 20px)',
