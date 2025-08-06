@@ -24,7 +24,7 @@ import {
   supportedLangConfig,
   getLangTitle,
 } from '@/utils/i18n';
-import { Dropdown } from 'antd';
+import { Dropdown, Select, Tag } from 'antd';
 import { Icons } from '@/components/icons';
 
 export interface IUserInfo {
@@ -66,6 +66,46 @@ const Navigation: FC<INavigationProps> = (props) => {
           </div>
           <div className={styles.right}>
             {/* extra components */}
+            {/* multi-cluster switcher */}
+            <Select
+              className="min-w-[200px] mr-[10px]"
+              size="middle"
+              variant="outlined"
+              defaultValue={'control-plane'}
+            >
+              <Select.Option value="control-plane">
+                <div className="flex flex-row justify-between items-center">
+                  <span>Karmada</span>
+                  <Tag color="green" bordered={false}>
+                    控制面
+                  </Tag>
+                </div>
+              </Select.Option>
+              <Select.Option value="member1">
+                <div className="flex flex-row justify-between items-center">
+                  <span>member1</span>
+                  <Tag color="blue" bordered={false}>
+                    成员集群
+                  </Tag>
+                </div>
+              </Select.Option>
+              <Select.Option value="member2">
+                <div className="flex flex-row justify-between items-center">
+                  <span>member2</span>
+                  <Tag color="blue" bordered={false}>
+                    成员集群
+                  </Tag>
+                </div>
+              </Select.Option>
+              <Select.Option value="member3">
+                <div className="flex flex-row justify-between items-center">
+                  <span>member3</span>
+                  <Tag color="blue" bordered={false}>
+                    成员集群
+                  </Tag>
+                </div>
+              </Select.Option>
+            </Select>
 
             {/* karmada web-terminal */}
             <Icons.terminal
