@@ -71,6 +71,14 @@ export default defineConfig(({ mode }) => {
             // Authorization: `Bearer ${env.VITE_TOKEN}`
           },
         },
+        '^/clusterapi/*': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          headers: {
+            // cookie: env.VITE_COOKIES,
+            // Authorization: `Bearer ${env.VITE_TOKEN}`
+          },
+        },
       },
     },
   };
