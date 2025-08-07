@@ -111,6 +111,9 @@ const Navigation: FC<INavigationProps> = (props) => {
             <Icons.terminal
               width={20}
               height={20}
+              style={{
+                display: onTerminalClick ? 'block' : 'none'
+              }}
               className={styles.terminalIcon}
               onClick={() => onTerminalClick?.()}
             />
