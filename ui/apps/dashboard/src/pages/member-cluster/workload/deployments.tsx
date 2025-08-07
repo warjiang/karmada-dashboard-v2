@@ -92,27 +92,32 @@ export default function MemberClusterDeployments() {
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        Deployments in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes deployments in the "{memberClusterName}" cluster.
+    <div className="p-4 h-full flex flex-col">
+      <div className="flex-shrink-0">
+        <h2 className="text-lg font-semibold mb-4">
+          Deployments in Member Cluster: {memberClusterName}
+        </h2>
+        <div className="mb-4 text-sm text-gray-600">
+          View and manage Kubernetes deployments in the "{memberClusterName}" cluster.
+        </div>
       </div>
       
-      <Table
-        columns={columns}
-        dataSource={mockDeployments}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} deployments`
-        }}
-      />
+      <div className="flex-1 flex flex-col">
+        <Table
+          columns={columns}
+          dataSource={mockDeployments}
+          rowKey="name"
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} deployments`
+          }}
+          scroll={{ y: 'calc(100vh - 400px)' }}
+        />
+      </div>
       
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
+      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded flex-shrink-0">
         <p className="text-sm text-blue-800">
           <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
           is successfully passed from the parent route and can be used for API calls to fetch cluster-specific deployments.
