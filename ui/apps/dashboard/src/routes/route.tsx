@@ -326,6 +326,10 @@ export function getRoutes() {
           },
           children: [
             {
+              index: true,
+              element: <MemberClusterOverview />,
+            },
+            {
               path: 'overview',
               element: <MemberClusterOverview />,
               handle: {
