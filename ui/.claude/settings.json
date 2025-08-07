@@ -1,0 +1,27 @@
+{
+  "mcp": {
+    "servers": {
+      "typescript-sdk": {
+        "enabled": true
+      },
+      "filesystem": {
+        "enabled": true
+      },
+      "github": {
+        "enabled": true
+      }
+    }
+  },
+  "project": {
+    "name": "karmada-dashboard-ui",
+    "type": "react-typescript-monorepo",
+    "packageManager": "pnpm",
+    "buildTool": "vite"
+  },
+  "development": {
+    "mainApp": "apps/dashboard",
+    "devCommand": "pnpm dashboard:dev",
+    "buildCommand": "pnpm dashboard:build",
+    "lintCommand": "cd apps/dashboard && pnpm lint"
+  }
+}
