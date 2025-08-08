@@ -1,16 +1,17 @@
-import { Select, Tag } from "antd";
-import { useClusters, useCluster } from "@/hooks/useCluster.ts";
-import { useNavigate } from "react-router-dom";
+import { Select, Tag } from 'antd';
+import { useClusters } from '@/hooks/useCluster.ts';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export const KarmadaClusterSelector = () => {
   const { data = [] } = useClusters();
-  const { cluster, setCluster } = useCluster();
+  // const { cluster, setCluster } = useCluster();
   const navigate = useNavigate();
-
+  const params = useParams<{
+    memberCluster: string;
+  }>();
   const handleChange = (value: string) => {
-    if (value === "control-plane") {
-      setCluster("");
-      navigate("/overview");
+    if (value === 'control-plane') {
+      navigate('/overview');
       return;
     }
     navigate(`/member-cluster/${value}/overview`);
@@ -21,7 +22,7 @@ export const KarmadaClusterSelector = () => {
       className="min-w-[200px] mr-[10px]"
       size="middle"
       variant="outlined"
-      value={cluster || "control-plane"}
+      value={params.memberCluster || 'control-plane'}
       onChange={handleChange}
     >
       <Select.Option value="control-plane">
@@ -33,7 +34,10 @@ export const KarmadaClusterSelector = () => {
         </div>
       </Select.Option>
       {data.map((cluster) => (
-        <Select.Option key={cluster.objectMeta.name} value={cluster.objectMeta.name}>
+        <Select.Option
+          key={cluster.objectMeta.name}
+          value={cluster.objectMeta.name}
+        >
           <div className="flex flex-row justify-between items-center">
             <span>{cluster.objectMeta.name}</span>
             <Tag color="blue" bordered={false}>

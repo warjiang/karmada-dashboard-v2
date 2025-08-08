@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { KarmadaClusterSelector } from "@/components/KarmadaClusterSelector";
+import { KarmadaClusterSelector } from '@/components/KarmadaClusterSelector';
 import { FC, CSSProperties } from 'react';
 import styles from './index.module.less';
 import karmadaLogo from '@/assets/karmada-logo.svg';
@@ -25,7 +25,7 @@ import {
   supportedLangConfig,
   getLangTitle,
 } from '@/utils/i18n';
-import { Dropdown, Tag } from 'antd';
+import { Dropdown } from 'antd';
 import { Icons } from '@/components/icons';
 
 export interface IUserInfo {
@@ -75,7 +75,7 @@ const Navigation: FC<INavigationProps> = (props) => {
               width={20}
               height={20}
               style={{
-                display: onTerminalClick ? 'block' : 'none'
+                display: onTerminalClick ? 'block' : 'none',
               }}
               className={styles.terminalIcon}
               onClick={() => onTerminalClick?.()}
