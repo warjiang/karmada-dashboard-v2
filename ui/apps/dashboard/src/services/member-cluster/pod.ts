@@ -68,12 +68,15 @@ export interface PodDetail extends Pod {
   serviceAccountName: string;
 }
 
-export async function GetPods(params: {
+export async function GetMemberClusterPods(params: {
+  memberClusterName: string;
   namespace?: string;
   keyword?: string;
 }) {
-  const { namespace, keyword } = params;
-  const url = namespace ? `/pod/${namespace}` : `/pod`;
+  const { memberClusterName, namespace, keyword } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/pod/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/pod`;
   const requestData = {} as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
@@ -92,39 +95,44 @@ export async function GetPods(params: {
   return resp.data;
 }
 
-export async function GetPodDetail(params: {
+export async function GetMemberClusterPodDetail(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
+  const { memberClusterName, namespace, name } = params;
   const resp = await karmadaClient.get<
     IResponse<
       {
         errors: string[];
       } & PodDetail
     >
-  >(`/pod/${namespace}/${name}`);
+  >(`/clusterapi/${memberClusterName}/api/v1/pod/${namespace}/${name}`);
   return resp.data;
 }
 
-export async function GetPodContainers(params: {
+export async function GetMemberClusterPodContainers(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
+  const { memberClusterName, namespace, name } = params;
   const resp = await karmadaClient.get<
     IResponse<{
       containers: Container[];
     }>
-  >(`/pod/${namespace}/${name}/container`);
+  >(
+    `/clusterapi/${memberClusterName}/api/v1/pod/${namespace}/${name}/container`,
+  );
   return resp.data;
 }
 
-export async function GetPodEvents(params: {
+export async function GetMemberClusterPodEvents(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
+  const { memberClusterName, namespace, name } = params;
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -133,31 +141,35 @@ export async function GetPodEvents(params: {
       };
       events: any[];
     }>
-  >(`/pod/${namespace}/${name}/event`);
+  >(`/clusterapi/${memberClusterName}/api/v1/pod/${namespace}/${name}/event`);
   return resp.data;
 }
 
-export async function GetPodPersistentVolumeClaims(params: {
+export async function GetMemberClusterPodPersistentVolumeClaims(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
+  const { memberClusterName, namespace, name } = params;
   const resp = await karmadaClient.get<
     IResponse<{
       persistentVolumeClaims: any[];
     }>
-  >(`/pod/${namespace}/${name}/persistentvolumeclaim`);
+  >(
+    `/clusterapi/${memberClusterName}/api/v1/pod/${namespace}/${name}/persistentvolumeclaim`,
+  );
   return resp.data;
 }
 
-export async function GetPodShell(params: {
+export async function GetMemberClusterPodShell(params: {
+  memberClusterName: string;
   namespace: string;
   pod: string;
   container: string;
 }) {
-  const { namespace, pod, container } = params;
+  const { memberClusterName, namespace, pod, container } = params;
   const resp = await karmadaClient.get<IResponse<any>>(
-    `/pod/${namespace}/${pod}/shell/${container}`
+    `/clusterapi/${memberClusterName}/api/v1/pod/${namespace}/${pod}/shell/${container}`,
   );
   return resp.data;
 }

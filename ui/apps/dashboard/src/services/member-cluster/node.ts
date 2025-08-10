@@ -90,14 +90,15 @@ export interface NodeDetail extends Node {
   events: any[];
 }
 
-export async function GetNodes(params?: {
+export async function GetMemberClusterNodes(params: {
+  memberClusterName: string;
   keyword?: string;
   filterBy?: string[];
   sortBy?: string[];
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { keyword, ...queryParams } = params || {};
+  const { memberClusterName, keyword, ...queryParams } = params;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
@@ -110,24 +111,32 @@ export async function GetNodes(params?: {
       };
       nodes: Node[];
     }>
-  >('/node', {
+  >(`/clusterapi/${memberClusterName}/api/v1/node`, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
-export async function GetNodeDetail(name: string) {
+export async function GetMemberClusterNodeDetail(params: {
+  memberClusterName: string;
+  name: string;
+}) {
+  const { memberClusterName, name } = params;
   const resp = await karmadaClient.get<
     IResponse<
       {
         errors: string[];
       } & NodeDetail
     >
-  >(`/node/${name}`);
+  >(`/clusterapi/${memberClusterName}/api/v1/node/${name}`);
   return resp.data;
 }
 
-export async function GetNodeEvents(name: string) {
+export async function GetMemberClusterNodeEvents(params: {
+  memberClusterName: string;
+  name: string;
+}) {
+  const { memberClusterName, name } = params;
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -136,11 +145,15 @@ export async function GetNodeEvents(name: string) {
       };
       events: any[];
     }>
-  >(`/node/${name}/event`);
+  >(`/clusterapi/${memberClusterName}/api/v1/node/${name}/event`);
   return resp.data;
 }
 
-export async function GetNodePods(name: string) {
+export async function GetMemberClusterNodePods(params: {
+  memberClusterName: string;
+  name: string;
+}) {
+  const { memberClusterName, name } = params;
   const resp = await karmadaClient.get<
     IResponse<{
       errors: string[];
@@ -149,11 +162,17 @@ export async function GetNodePods(name: string) {
       };
       pods: any[];
     }>
-  >(`/node/${name}/pod`);
+  >(`/clusterapi/${memberClusterName}/api/v1/node/${name}/pod`);
   return resp.data;
 }
 
-export async function DrainNode(name: string) {
-  const resp = await karmadaClient.put<IResponse<any>>(`/node/${name}/drain`);
+export async function DrainMemberClusterNode(params: {
+  memberClusterName: string;
+  name: string;
+}) {
+  const { memberClusterName, name } = params;
+  const resp = await karmadaClient.put<IResponse<any>>(
+    `/clusterapi/${memberClusterName}/api/v1/node/${name}/drain`,
+  );
   return resp.data;
 }

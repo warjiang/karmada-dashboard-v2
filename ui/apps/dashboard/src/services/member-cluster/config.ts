@@ -53,8 +53,9 @@ export interface ImagePullSecretSpec {
   };
 }
 
-// ConfigMap APIs
-export async function GetConfigMaps(params?: {
+// Member Cluster ConfigMap APIs
+export async function GetMemberClusterConfigMaps(params: {
+  memberClusterName: string;
   namespace?: string;
   keyword?: string;
   filterBy?: string[];
@@ -62,8 +63,10 @@ export async function GetConfigMaps(params?: {
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { namespace, keyword, ...queryParams } = params || {};
-  const url = namespace ? `/configmap/${namespace}` : `/configmap`;
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/configmap/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/configmap`;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
@@ -82,23 +85,25 @@ export async function GetConfigMaps(params?: {
   return resp.data;
 }
 
-export async function GetConfigMapDetail(params: {
+export async function GetMemberClusterConfigMapDetail(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
+  const { memberClusterName, namespace, name } = params;
   const resp = await karmadaClient.get<
     IResponse<
       {
         errors: string[];
       } & ConfigMapDetail
     >
-  >(`/configmap/${namespace}/${name}`);
+  >(`/clusterapi/${memberClusterName}/api/v1/configmap/${namespace}/${name}`);
   return resp.data;
 }
 
-// Secret APIs
-export async function GetSecrets(params?: {
+// Member Cluster Secret APIs
+export async function GetMemberClusterSecrets(params: {
+  memberClusterName: string;
   namespace?: string;
   keyword?: string;
   filterBy?: string[];
@@ -106,8 +111,10 @@ export async function GetSecrets(params?: {
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { namespace, keyword, ...queryParams } = params || {};
-  const url = namespace ? `/secret/${namespace}` : `/secret`;
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/secret/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/secret`;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
@@ -126,22 +133,30 @@ export async function GetSecrets(params?: {
   return resp.data;
 }
 
-export async function GetSecretDetail(params: {
+export async function GetMemberClusterSecretDetail(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
+  const { memberClusterName, namespace, name } = params;
   const resp = await karmadaClient.get<
     IResponse<
       {
         errors: string[];
       } & SecretDetail
     >
-  >(`/secret/${namespace}/${name}`);
+  >(`/clusterapi/${memberClusterName}/api/v1/secret/${namespace}/${name}`);
   return resp.data;
 }
 
-export async function CreateImagePullSecret(spec: ImagePullSecretSpec) {
-  const resp = await karmadaClient.post<IResponse<Secret>>('/secret', spec);
+export async function CreateMemberClusterImagePullSecret(params: {
+  memberClusterName: string;
+  spec: ImagePullSecretSpec;
+}) {
+  const { memberClusterName, spec } = params;
+  const resp = await karmadaClient.post<IResponse<Secret>>(
+    `/clusterapi/${memberClusterName}/api/v1/secret`,
+    spec,
+  );
   return resp.data;
 }
