@@ -19,7 +19,7 @@ export const KarmadaClusterSelector = () => {
 
   return (
     <Select
-      className="min-w-[200px] mr-[10px]"
+      className="min-w-[230px] mr-[10px]"
       size="middle"
       variant="outlined"
       value={params.memberCluster || 'control-plane'}
@@ -27,7 +27,7 @@ export const KarmadaClusterSelector = () => {
     >
       <Select.Option value="control-plane">
         <div className="flex flex-row justify-between items-center">
-          <span>Karmada</span>
+          <span className="mr-[2]">Karmada</span>
           <Tag color="green" bordered={false}>
             control-plane
           </Tag>
@@ -39,7 +39,7 @@ export const KarmadaClusterSelector = () => {
           value={cluster.objectMeta.name}
         >
           <div className="flex flex-row justify-between items-center">
-            <span>{cluster.objectMeta.name}</span>
+            <span className="mr-[2]">{cluster.objectMeta.name}</span>
             <Tag color="blue" bordered={false}>
               member-cluster
             </Tag>
