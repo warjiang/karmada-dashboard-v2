@@ -83,25 +83,17 @@ export default function MemberClusterDeployments() {
           <Button icon={<EditOutlined />} size="small" title="Edit deployment">
             Edit
           </Button>
+          {/* 
           <Button icon={<DeleteOutlined />} size="small" danger title="Delete deployment">
             Delete
-          </Button>
+          </Button> */}
         </Space>
       )
     }
   ];
 
   return (
-    <div className="p-4 h-full flex flex-col">
-      <div className="flex-shrink-0">
-        <h2 className="text-lg font-semibold mb-4">
-          Deployments in Member Cluster: {memberClusterName}
-        </h2>
-        <div className="mb-4 text-sm text-gray-600">
-          View and manage Kubernetes deployments in the "{memberClusterName}" cluster.
-        </div>
-      </div>
-      
+    <div className="h-full w-full flex flex-col p-4">
       <div className="flex-1 flex flex-col">
         <Table
           columns={columns}
