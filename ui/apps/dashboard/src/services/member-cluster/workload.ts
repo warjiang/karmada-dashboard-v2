@@ -93,6 +93,167 @@ export async function GetMemberClusterWorkloads(params: {
   return resp.data;
 }
 
+// Specific workload list functions
+export async function GetMemberClusterDeployments(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/deployment`;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      status?: WorkloadStatus;
+      deployments: Workload[];
+    }>
+  >(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterDaemonSets(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/daemonset/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/daemonset`;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      status?: WorkloadStatus;
+      daemonSets: Workload[];
+    }>
+  >(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterStatefulSets(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/statefulset/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/statefulset`;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      status?: WorkloadStatus;
+      statefulSets: Workload[];
+    }>
+  >(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterJobs(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/job/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/job`;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      status?: WorkloadStatus;
+      jobs: Workload[];
+    }>
+  >(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterCronJobs(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/cronjob/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/cronjob`;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      status?: WorkloadStatus;
+      cronJobs: Workload[];
+    }>
+  >(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
 export interface WorkloadDetail {
   objectMeta: ObjectMeta;
   typeMeta: TypeMeta;
