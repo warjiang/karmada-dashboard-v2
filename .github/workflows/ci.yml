@@ -208,6 +208,11 @@ jobs:
           curl -f http://localhost:8000/api/v1/namespace && echo "✓ Namespace API works" || echo "✗ Namespace API failed"
           echo "API tests completed"
 
+      - name: Debug working dir
+        run: |
+          pwd
+          ls -al
+
       - name: Run Playwright tests
         working-directory: karmada-dashboard/ui/apps/dashboard
         run: |
