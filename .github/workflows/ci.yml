@@ -116,31 +116,14 @@ jobs:
           echo "=================="
       - name: Generate KARMADA_TOKEN for CI
         run: |
-          # 创建 ServiceAccount
           kubectl create sa e2e-test -n kube-system
           kubectl create clusterrolebinding e2e-test-binding \
             --clusterrole=cluster-admin \
             --serviceaccount=kube-system:e2e-test
           
-          # 为新版本 Kubernetes 手动创建 Secret
-          cat <<EOF | kubectl apply -f -
-          apiVersion: v1
-          kind: Secret
-          metadata:
-            name: e2e-test-token
-            namespace: kube-system
-            annotations:
-              kubernetes.io/service-account.name: e2e-test
-          type: kubernetes.io/service-account-token
-          EOF
-          
-          # 等待 token 生成
-          kubectl wait --for=condition=Ready secret/e2e-test-token -n kube-system --timeout=60s
-          
-          # 提取 token
-          TOKEN=$(kubectl get secret e2e-test-token -n kube-system -o jsonpath="{.data.token}" | base64 --decode)
+          # 使用 kubectl create token 命令生成临时 token
+          TOKEN=$(kubectl create token e2e-test -n kube-system --duration=3600s)
           echo "KARMADA_TOKEN=$TOKEN" >> $GITHUB_ENV
-          echo "Token generated successfully"
       - name: Checkout dashboard repo
         uses: actions/checkout@v4
         with:
