@@ -99,6 +99,16 @@ jobs:
           cd karmada
           export CLUSTER_VERSION=kindest/node:${{ matrix.k8s }}
           hack/local-up-karmada.sh
+      - name: Debug cluster status
+        run: |
+          echo "=== Debug Info ==="
+          echo "Current directory: $(pwd)"
+          echo "KUBECONFIG: $KUBECONFIG"
+          kubectl config get-contexts || echo "No contexts available"
+          kubectl cluster-info || echo "Cluster info failed"
+          docker ps || echo "Docker ps failed" 
+          kind get clusters || echo "Kind get clusters failed"
+          echo "=================="
       - name: Generate KARMADA_TOKEN for CI
         run: |
           kubectl create sa e2e-test -n kube-system
