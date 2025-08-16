@@ -116,12 +116,31 @@ jobs:
           echo "=================="
       - name: Generate KARMADA_TOKEN for CI
         run: |
+          # 创建 ServiceAccount
           kubectl create sa e2e-test -n kube-system
           kubectl create clusterrolebinding e2e-test-binding \
             --clusterrole=cluster-admin \
             --serviceaccount=kube-system:e2e-test
-          TOKEN=$(kubectl get secret $(kubectl get sa e2e-test -n kube-system -o jsonpath="{.secrets[0].name}") -n kube-system -o jsonpath="{.data.token}" | base64 --decode)
+          
+          # 为新版本 Kubernetes 手动创建 Secret
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: e2e-test-token
+            namespace: kube-system
+            annotations:
+              kubernetes.io/service-account.name: e2e-test
+          type: kubernetes.io/service-account-token
+          EOF
+          
+          # 等待 token 生成
+          kubectl wait --for=condition=Ready secret/e2e-test-token -n kube-system --timeout=60s
+          
+          # 提取 token
+          TOKEN=$(kubectl get secret e2e-test-token -n kube-system -o jsonpath="{.data.token}" | base64 --decode)
           echo "KARMADA_TOKEN=$TOKEN" >> $GITHUB_ENV
+          echo "Token generated successfully"
       - name: Checkout dashboard repo
         uses: actions/checkout@v4
         with:
@@ -156,9 +175,12 @@ jobs:
           echo "Check if Makefile exists:"
           ls -la karmada-dashboard/Makefile || echo "No Makefile found"
           echo "========================="
-      - name: Start Dashboard and wait for readiness
+      - name: Build and start Dashboard
         run: |
           cd karmada-dashboard
+          echo "Building dashboard binary..."
+          make build-bin
+          
           echo "Starting dashboard..."
           # 启动 dashboard 服务（后台运行）
           nohup make run > dashboard.log 2>&1 &
