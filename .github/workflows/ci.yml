@@ -108,6 +108,10 @@ jobs:
           kubectl cluster-info || echo "Cluster info failed"
           docker ps || echo "Docker ps failed" 
           kind get clusters || echo "Kind get clusters failed"
+          ls -la $HOME/.kube/ || echo "No .kube directory"
+          cat $HOME/.kube/config || echo "No standard config"
+          cat $HOME/.kube/karmada.config || echo "No karmada config"
+          cat $HOME/.kube/members.config || echo "No members config"
           echo "=================="
       - name: Generate KARMADA_TOKEN for CI
         run: |
