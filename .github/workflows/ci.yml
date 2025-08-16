@@ -99,6 +99,7 @@ jobs:
           cd karmada
           export CLUSTER_VERSION=kindest/node:${{ matrix.k8s }}
           hack/local-up-karmada.sh
+          echo "KUBECONFIG=/home/runner/.kube/karmada.config" >> $GITHUB_ENV
       - name: Debug cluster status
         run: |
           echo "=== Debug Info ==="
