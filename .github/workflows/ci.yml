@@ -89,17 +89,20 @@ jobs:
           large-packages: false
           docker-images: false
           swap-storage: false
+
       - name: Checkout karmada repo
         uses: actions/checkout@v4
         with:
           repository: karmada-io/karmada
           path: karmada
+
       - name: setup e2e test environment
         run: |
           cd karmada
           export CLUSTER_VERSION=kindest/node:${{ matrix.k8s }}
           hack/local-up-karmada.sh
           echo "KUBECONFIG=/home/runner/.kube/karmada.config" >> $GITHUB_ENV
+
       - name: Debug cluster status
         run: |
           echo "=== Debug Info ==="
@@ -114,6 +117,7 @@ jobs:
           cat $HOME/.kube/karmada.config || echo "No karmada config"
           cat $HOME/.kube/members.config || echo "No members config"
           echo "=================="
+
       - name: Generate KARMADA_TOKEN for CI
         run: |
           kubectl create sa e2e-test -n kube-system
@@ -124,6 +128,7 @@ jobs:
           # 使用 kubectl create token 命令生成临时 token
           TOKEN=$(kubectl create token e2e-test -n kube-system --duration=3600s)
           echo "KARMADA_TOKEN=$TOKEN" >> $GITHUB_ENV
+
       - name: Checkout dashboard repo
         uses: actions/checkout@v4
         with:
@@ -136,6 +141,7 @@ jobs:
         with:
           # keep in sync with the packageManager version in `ui/package.json`
           version: 9.1.2
+
       - name: Install dependencies
         run: |
           echo "Start build"
@@ -143,10 +149,12 @@ jobs:
           cd karmada-dashboard/ui
           pnpm install
           pnpm turbo build
+
       - name: Build API binary
         run: |
           cd karmada-dashboard
           make build
+
       - name: Start API server
         run: |
           cd karmada-dashboard
@@ -174,6 +182,7 @@ jobs:
         run: |
           cd karmada-dashboard/ui/apps/dashboard
           pnpm exec playwright install --with-deps
+
       - name: Debug environment before starting dashboard
         run: |
           echo "=== Environment Debug ==="
@@ -184,32 +193,14 @@ jobs:
           ls -la karmada-dashboard/ || echo "No dashboard directory"
           echo "Check if Makefile exists:"
           ls -la karmada-dashboard/Makefile || echo "No Makefile found"
-          echo "=== API Server Status ==="
-          nc -z 127.0.0.1 8000 && echo "✓ API port 8000 is open" || echo "✗ API port 8000 is closed"
-          echo "=== Test API endpoint ==="
-          curl -f http://127.0.0.1:8000/api/v1/cluster 2>/dev/null && echo "✓ API endpoint works" || echo "✗ API endpoint failed"
           echo "========================="
+
       - name: Build frontend (for e2e)
         working-directory: karmada-dashboard/ui/apps/dashboard
         run: |
           pnpm build
 
-
-
-      - name: Test API connectivity before running tests
-        run: |
-          echo "Testing API connectivity..."
-          # 测试几个关键的API端点
-          curl -f http://127.0.0.1:8000/api/v1/cluster && echo "✓ Cluster API works" || echo "✗ Cluster API failed"
-          curl -f http://127.0.0.1:8000/api/v1/namespace && echo "✓ Namespace API works" || echo "✗ Namespace API failed"
-          echo "API tests completed"
-
       - name: Run Playwright tests
-        working-directory: karmada-dashboard/ui/apps/dashboard
-        env:
-          # 确保前端知道API服务器地址
-          API_BASE_URL: http://127.0.0.1:8000
-          VITE_API_BASE_URL: http://127.0.0.1:8000
         run: |
           cd karmada-dashboard/ui/apps/dashboard
           pnpm exec playwright test
