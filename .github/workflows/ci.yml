@@ -209,8 +209,11 @@ jobs:
           echo "API tests completed"
 
       - name: Run Playwright tests
+        working-directory: karmada-dashboard/ui/apps/dashboard
+        env:
+          # 让playwright的webServer知道API地址
+          VITE_API_BASE_URL: http://127.0.0.1:8000
         run: |
-          cd karmada-dashboard/ui/apps/dashboard
           pnpm exec playwright test
 
       # ===== 添加进程清理 =====
