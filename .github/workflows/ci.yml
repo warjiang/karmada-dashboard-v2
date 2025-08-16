@@ -153,6 +153,25 @@ jobs:
           make run-api &
           echo $! > .api.pid
           sleep 5
+          # ===== 新增的健康检查步骤 =====
+          - name: Wait for API server to be ready
+            run: |
+              echo "Waiting for API server to be ready..."
+              timeout 120s bash -c 'while ! curl -f http://localhost:8080/healthz 2>/dev/null; do echo "Waiting for API..."; sleep 5; done' || {
+                echo "API server failed to start within 120 seconds"
+                echo "=== API Server Logs ==="
+                if [ -f karmada-dashboard/.api.pid ]; then
+                  API_PID=$(cat karmada-dashboard/.api.pid)
+                  ps aux | grep $API_PID || echo "API process not found"
+                fi
+                echo "=== Port Status ==="
+                netstat -tuln | grep 8080 || echo "Port 8080 not listening"
+                echo "=== Environment Variables ==="
+                echo "KUBECONFIG: $KUBECONFIG"
+                echo "KARMADA_TOKEN is set: ${{ env.KARMADA_TOKEN != '' }}"
+                exit 1
+              }
+              echo "API server is ready!"
       - name: Install Playwright Browsers
         run: |
           cd karmada-dashboard/ui/apps/dashboard
@@ -172,10 +191,62 @@ jobs:
         working-directory: karmada-dashboard/ui/apps/dashboard
         run: |
           pnpm build
+      # ===== 新增的前端服务健康检查 =====
+      - name: Start frontend dev server and wait for readiness
+        working-directory: karmada-dashboard/ui/apps/dashboard
+        run: |
+          echo "Starting frontend dev server..."
+          pnpm dev &
+          FRONTEND_PID=$!
+          echo $FRONTEND_PID > .frontend.pid
+      
+          echo "Waiting for frontend to be ready..."
+          timeout 180s bash -c 'while ! curl -f http://localhost:5173 2>/dev/null; do echo "Waiting for frontend..."; sleep 5; done' || {
+            echo "Frontend failed to start within 180 seconds"
+            echo "=== Frontend Process Status ==="
+            ps aux | grep $FRONTEND_PID || echo "Frontend process not found"
+            echo "=== Port Status ==="
+            netstat -tuln | grep 5173 || echo "Port 5173 not listening"
+            echo "=== Frontend Logs (if any) ==="
+            # 尝试获取一些日志
+            jobs
+            exit 1
+          }
+          echo "Frontend is ready!"
+
+      # ===== 新增的服务状态验证 =====
+      - name: Verify all services are running
+        run: |
+          echo "=== Final Service Verification ==="
+          echo "API Server Health:"
+          curl -f http://localhost:8080/healthz && echo "✓ API OK" || echo "✗ API Failed"
+          echo "Frontend Accessibility:"
+          curl -f http://localhost:5173 && echo "✓ Frontend OK" || echo "✗ Frontend Failed"
+          echo "=== Process Status ==="
+          ps aux | grep -E "(node|pnpm|dashboard)" | grep -v grep || echo "No relevant processes found"
+          echo "=== Network Ports ==="
+          netstat -tuln | grep -E "(8080|5173)" || echo "Ports not listening"
+          echo "================================"
       - name: Run Playwright tests
         run: |
           cd karmada-dashboard/ui/apps/dashboard
           pnpm exec playwright test
+      # ===== 新增的清理步骤 =====
+      - name: Cleanup processes
+        if: always()
+        run: |
+          echo "Cleaning up processes..."
+          if [ -f karmada-dashboard/.api.pid ]; then
+            API_PID=$(cat karmada-dashboard/.api.pid)
+            kill $API_PID 2>/dev/null || echo "API process already stopped"
+          fi
+          if [ -f karmada-dashboard/ui/apps/dashboard/.frontend.pid ]; then
+            FRONTEND_PID=$(cat karmada-dashboard/ui/apps/dashboard/.frontend.pid)
+            kill $FRONTEND_PID 2>/dev/null || echo "Frontend process already stopped"
+          fi
+          # 强制杀死可能残留的进程
+          pkill -f "pnpm dev" 2>/dev/null || echo "No pnpm dev processes to kill"
+          pkill -f "make run-api" 2>/dev/null || echo "No API processes to kill"
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
