@@ -162,7 +162,7 @@ jobs:
         run: |
           cd karmada-dashboard
           echo "Building dashboard binary..."
-          make build-bin
+          make build
           
           echo "Starting dashboard..."
           # 启动 dashboard 服务（后台运行）
