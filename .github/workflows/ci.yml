@@ -200,6 +200,14 @@ jobs:
         run: |
           pnpm build
 
+      - name: Test API connectivity before running tests
+        run: |
+          echo "Testing API connectivity..."
+          # 测试几个关键的API端点
+          curl -f http://127.0.0.1:8000/api/v1/cluster && echo "✓ Cluster API works" || echo "✗ Cluster API failed"
+          curl -f http://127.0.0.1:8000/api/v1/namespace && echo "✓ Namespace API works" || echo "✗ Namespace API failed"
+          echo "API tests completed"
+
       - name: Run Playwright tests
         run: |
           cd karmada-dashboard/ui/apps/dashboard
