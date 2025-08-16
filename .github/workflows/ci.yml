@@ -145,6 +145,38 @@ jobs:
         run: |
           cd karmada-dashboard/ui/apps/dashboard
           pnpm exec playwright install --with-deps
+      - name: Debug environment before starting dashboard
+        run: |
+          echo "=== Environment Debug ==="
+          echo "KARMADA_TOKEN is set: ${{ env.KARMADA_TOKEN != '' }}"
+          echo "KUBECONFIG: $KUBECONFIG"
+          echo "Current directory: $(pwd)"
+          echo "Dashboard directory contents:"
+          ls -la karmada-dashboard/ || echo "No dashboard directory"
+          echo "Check if Makefile exists:"
+          ls -la karmada-dashboard/Makefile || echo "No Makefile found"
+          echo "========================="
+      - name: Start Dashboard and wait for readiness
+        run: |
+          cd karmada-dashboard
+          echo "Starting dashboard..."
+          # 启动 dashboard 服务（后台运行）
+          nohup make run > dashboard.log 2>&1 &
+          DASHBOARD_PID=$!
+          echo "Dashboard started with PID: $DASHBOARD_PID"
+          
+          # 等待服务就绪
+          echo "Waiting for dashboard to be ready..."
+          timeout 60 bash -c 'until curl -f http://localhost:8080; do echo "Waiting..."; sleep 2; done' || {
+            echo "Dashboard failed to start. Checking logs:"
+            cat dashboard.log || echo "No log file found"
+            ps aux | grep make || echo "No make process found"
+            exit 1
+          }
+          echo "Dashboard is ready!"
+        env:
+          KARMADA_TOKEN: ${{ env.KARMADA_TOKEN }}
+          KUBECONFIG: ${{ env.KUBECONFIG }}
       - name: Run Playwright tests
         run: |
           cd karmada-dashboard/ui/apps/dashboard
