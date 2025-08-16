@@ -17,7 +17,10 @@ limitations under the License.
 // apps/dashboard/e2e/namespace/namespace-network-error.spec.ts
 import { test, expect } from '@playwright/test';
 
-const baseURL = process.env.BASE_URL || 'http://192.168.47.131:5173';
+// Set webServer.url and use.baseURL with the location of the WebServer
+const HOST = process.env.HOST || 'localhost';
+const PORT = process.env.PORT || 5173;
+const baseURL = `http://${HOST}:${PORT}`;
 const basePath = '/multicloud-resource-manage';
 const token = process.env.KARMADA_TOKEN || '';
 

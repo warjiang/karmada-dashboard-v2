@@ -17,7 +17,10 @@ limitations under the License.
 // apps/dashboard/e2e/namespace-delete.spec.ts
 import { test, expect } from '@playwright/test';
 
-const baseURL = process.env.BASE_URL || 'http://192.168.47.131:5173';
+// Set webServer.url and use.baseURL with the location of the WebServer
+const HOST = process.env.HOST || 'localhost';
+const PORT = process.env.PORT || 5173;
+const baseURL = `http://${HOST}:${PORT}`;
 const basePath = '/multicloud-resource-manage';
 const token = process.env.KARMADA_TOKEN || '';
 
@@ -59,8 +62,32 @@ test('should delete a namespace', async ({ page }) => {
     await searchBox.fill(namespaceName);
     await searchBox.press('Enter');
 
-    // 确认 namespace 已删除
-    await expect(page.locator('table')).not.toContainText(namespaceName, { timeout: 60000 });
+    // // 确认 namespace 已删除
+    // await expect(page.locator('table')).not.toContainText(namespaceName, { timeout: 60000 });
+
+    const table = page.locator('table');
+    const start = Date.now();
+    let gone = false;
+
+    while (Date.now() - start < 120000) { // 最多等 120 秒
+        const content = await table.innerText();
+        if (!content.includes(namespaceName)) {
+            console.log(`Namespace ${namespaceName} 已彻底删除`);
+            gone = true;
+            break;
+        } else if (content.includes('Terminating')) {
+            console.log(`Namespace ${namespaceName} Terminating`);
+        } else {
+            console.log(`Namespace ${namespaceName} 仍然存在`);
+        }
+        await page.waitForTimeout(5000); // 每 5 秒检查一次
+        await page.reload({ waitUntil: 'networkidle' }); // 强制刷新，拿最新数据
+        await searchBox.fill(namespaceName);
+        await searchBox.press('Enter');
+    }
+
+    // 确认最终被删除（如果超时则失败）
+    expect(gone).toBeTruthy();
 
     // 清空搜索框
     await searchBox.clear();
