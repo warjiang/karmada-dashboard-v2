@@ -143,6 +143,16 @@ jobs:
           cd karmada-dashboard/ui
           pnpm install
           pnpm turbo build
+      - name: Build API binary
+        run: |
+          cd karmada-dashboard
+          make build
+      - name: Start API server
+        run: |
+          cd karmada-dashboard
+          make run-api &
+          echo $! > .api.pid
+          sleep 5
       - name: Install Playwright Browsers
         run: |
           cd karmada-dashboard/ui/apps/dashboard
