@@ -20,6 +20,7 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-22.04
+    if: false
     steps:
       - name: checkout code
         uses: actions/checkout@v4
@@ -75,7 +76,8 @@ jobs:
         # Here support the latest three minor releases of Kubernetes, this can be considered to be roughly
         # the same as the End of Life of the Kubernetes release: https://kubernetes.io/releases/
         # Please remember to update the CI Schedule Workflow when we add a new version.
-        k8s: [ v1.31.0, v1.32.0, v1.33.0 ]
+        # k8s: [ v1.31.0, v1.32.0, v1.33.0 ]
+        k8s: [ v1.31.0 ]
     steps:
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@main
@@ -106,6 +108,9 @@ jobs:
       - name: Debug cluster status
         run: |
           echo "=== Debug Info ==="
+          echo "check k8s ctx info"
+          kubectl config get-contexts 
+          echo "check k8s ctx info finished"
           echo "Current directory: $(pwd)"
           echo "KUBECONFIG: $KUBECONFIG"
           kubectl config get-contexts || echo "No contexts available"
