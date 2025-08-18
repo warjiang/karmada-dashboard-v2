@@ -25,31 +25,36 @@ const basePath = '/multicloud-resource-manage';
 const token = process.env.KARMADA_TOKEN || '';
 
 test('Namespace network failure with refresh', async ({ page }) => {
-    // 阻塞 Namespace API 请求
-    await page.route('**/api/v1/namespaces', route => route.abort());
+  // 阻塞 Namespace API 请求
+  await page.route('**/api/v1/namespaces', (route) => route.abort());
 
-    // 导航到页面
-    await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
+  // 导航到页面
+  await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle' });
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
 
-    // 设置 token 并刷新，保证登录状态
-    await page.evaluate((t) => localStorage.setItem('token', t), token);
-    await page.reload({ waitUntil: 'networkidle' });
+  // 设置 token 并刷新，保证登录状态
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.reload({ waitUntil: 'networkidle' });
 
-    // 等待关键元素加载完成，宽松等待 Namespaces 文字
-    await page.waitForSelector('text=Namespaces', { timeout: 15000 });
+  // 等待关键元素加载完成，宽松等待 Namespaces 文字
+  await page.waitForSelector('text=Namespaces', { timeout: 15000 });
 
-    // 验证表格或错误显示
-    const tableRows = page.locator('table tbody tr');
-    const errorMsg = page.locator('.error-message');
+  // 验证表格或错误显示
+  const tableRows = page.locator('table tbody tr');
+  const errorMsg = page.locator('.error-message');
 
-    const rowCount = await tableRows.count();
-    const errorCount = await errorMsg.count();
+  const rowCount = await tableRows.count();
+  const errorCount = await errorMsg.count();
 
-    console.log(`Table rows: ${rowCount}, Error messages: ${errorCount}`);
+  console.log(`Table rows: ${rowCount}, Error messages: ${errorCount}`);
 
-    // 最终断言：要么表格为空，要么显示网络错误
-    expect(rowCount === 0 || errorCount > 0).toBeTruthy();
+  // 最终断言：要么表格为空，要么显示网络错误
+  expect(rowCount === 0 || errorCount > 0).toBeTruthy();
 
-    // 截图调试
-    await page.screenshot({ path: 'debug-namespace-network-failure.png', fullPage: true });
+  // 截图调试
+  await page.screenshot({
+    path: 'debug-namespace-network-failure.png',
+    fullPage: true,
+  });
 });
