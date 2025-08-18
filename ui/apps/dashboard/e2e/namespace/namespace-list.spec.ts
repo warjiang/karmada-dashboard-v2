@@ -29,6 +29,7 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate((t) => localStorage.setItem('token', t), token);
   await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
   console.log('token is', token);
+  console.log('token length is', token.length);
   await page.reload({ waitUntil: 'networkidle' });
   await page.waitForSelector('text=Dashboard', { timeout: 30000 });
 });
