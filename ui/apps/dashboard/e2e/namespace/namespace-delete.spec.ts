@@ -25,72 +25,77 @@ const basePath = '/multicloud-resource-manage';
 const token = process.env.KARMADA_TOKEN || '';
 
 test.beforeEach(async ({ page }) => {
-    await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
-    await page.evaluate((t) => localStorage.setItem('token', t), token);
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('text=Dashboard', { timeout: 30000 });
+  await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle' });
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('text=Dashboard', { timeout: 30000 });
 });
 
 test('should delete a namespace', async ({ page }) => {
-    await page.waitForSelector('text=Namespaces', { timeout: 60000 });
-    await page.click('text=Namespaces');
+  await page.waitForSelector('text=Namespaces', { timeout: 60000 });
+  await page.click('text=Namespaces');
 
-    // 创建临时 namespace
-    const namespaceName = `test-to-delete-${Date.now()}`;
-    await page.click('button:has-text("Add")');
-    await page.fill('#name', namespaceName);
-    await page.click('label:has-text("No")');
-    await page.click('button:has-text("Submit")');
+  // 创建临时 namespace
+  const namespaceName = `test-to-delete-${Date.now()}`;
+  await page.click('button:has-text("Add")');
+  await page.fill('#name', namespaceName);
+  await page.click('label:has-text("No")');
+  await page.click('button:has-text("Submit")');
 
-    // 使用搜索框确认创建成功
-    const searchBox = page.getByPlaceholder('Search by Name');
-    await searchBox.fill(namespaceName);
-    await searchBox.press('Enter');
-    await page.waitForTimeout(1000);
+  // 使用搜索框确认创建成功
+  const searchBox = page.getByPlaceholder('Search by Name');
+  await searchBox.fill(namespaceName);
+  await searchBox.press('Enter');
+  await page.waitForTimeout(1000);
 
-    await page.waitForSelector(`tr:has-text("${namespaceName}")`, { timeout: 30000 });
+  await page.waitForSelector(`tr:has-text("${namespaceName}")`, {
+    timeout: 30000,
+  });
 
-    // 删除 namespace
-    await page.click(`tr:has-text("${namespaceName}") button:has-text("Delete")`);
-    await page.click('button:has-text("Confirm")');
+  // 删除 namespace
+  await page.click(`tr:has-text("${namespaceName}") button:has-text("Delete")`);
+  await page.click('button:has-text("Confirm")');
 
-    // 刷新页面，确保表格拉取最新数据
-    await page.reload({ waitUntil: 'networkidle' });
+  // 刷新页面，确保表格拉取最新数据
+  await page.reload({ waitUntil: 'networkidle' });
 
-    // 使用搜索框确认删除
-    await searchBox.fill('');
-    await searchBox.fill(namespaceName);
-    await searchBox.press('Enter');
+  // 使用搜索框确认删除
+  await searchBox.fill('');
+  await searchBox.fill(namespaceName);
+  await searchBox.press('Enter');
 
-    // // 确认 namespace 已删除
-    // await expect(page.locator('table')).not.toContainText(namespaceName, { timeout: 60000 });
+  // // 确认 namespace 已删除
+  // await expect(page.locator('table')).not.toContainText(namespaceName, { timeout: 60000 });
 
-    const table = page.locator('table');
-    const start = Date.now();
-    let gone = false;
+  const table = page.locator('table');
+  const start = Date.now();
+  let gone = false;
 
-    while (Date.now() - start < 120000) { // 最多等 120 秒
-        const content = await table.innerText();
-        if (!content.includes(namespaceName)) {
-            console.log(`Namespace ${namespaceName} 已彻底删除`);
-            gone = true;
-            break;
-        } else if (content.includes('Terminating')) {
-            console.log(`Namespace ${namespaceName} Terminating`);
-        } else {
-            console.log(`Namespace ${namespaceName} 仍然存在`);
-        }
-        await page.waitForTimeout(5000); // 每 5 秒检查一次
-        await page.reload({ waitUntil: 'networkidle' }); // 强制刷新，拿最新数据
-        await searchBox.fill(namespaceName);
-        await searchBox.press('Enter');
+  while (Date.now() - start < 120000) {
+    // 最多等 120 秒
+    const content = await table.innerText();
+    if (!content.includes(namespaceName)) {
+      console.log(`Namespace ${namespaceName} 已彻底删除`);
+      gone = true;
+      break;
+    } else if (content.includes('Terminating')) {
+      console.log(`Namespace ${namespaceName} Terminating`);
+    } else {
+      console.log(`Namespace ${namespaceName} 仍然存在`);
     }
+    await page.waitForTimeout(5000); // 每 5 秒检查一次
+    await page.reload({ waitUntil: 'networkidle' }); // 强制刷新，拿最新数据
+    await searchBox.fill(namespaceName);
+    await searchBox.press('Enter');
+  }
 
-    // 确认最终被删除（如果超时则失败）
-    expect(gone).toBeTruthy();
+  // 确认最终被删除（如果超时则失败）
+  expect(gone).toBeTruthy();
 
-    // 清空搜索框
-    await searchBox.clear();
+  // 清空搜索框
+  await searchBox.clear();
 
-    await page.screenshot({ path: 'debug-namespace-delete.png', fullPage: true });
+  await page.screenshot({ path: 'debug-namespace-delete.png', fullPage: true });
 });

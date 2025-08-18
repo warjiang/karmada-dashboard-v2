@@ -25,38 +25,42 @@ const basePath = '/multicloud-resource-manage';
 const token = process.env.KARMADA_TOKEN || '';
 
 test.beforeEach(async ({ page }) => {
-    await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
-    await page.evaluate((t) => localStorage.setItem('token', t), token);
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('text=Dashboard', { timeout: 30000 });
+  await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle' });
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('text=Dashboard', { timeout: 30000 });
 });
 
 test('should create a new namespace', async ({ page }) => {
-    // 打开 Namespaces 页面
-    await page.waitForSelector('text=Namespaces', { timeout: 60000 });
-    await page.click('text=Namespaces');
+  // 打开 Namespaces 页面
+  await page.waitForSelector('text=Namespaces', { timeout: 60000 });
+  await page.click('text=Namespaces');
 
-    // 点击 "Add" 创建新 namespace
-    await page.waitForSelector('button:has-text("Add")', { timeout: 30000 });
-    await page.click('button:has-text("Add")');
+  // 点击 "Add" 创建新 namespace
+  await page.waitForSelector('button:has-text("Add")', { timeout: 30000 });
+  await page.click('button:has-text("Add")');
 
-    // 填写唯一 namespace 名称
-    const namespaceName = `test-${Date.now()}`;
-    await page.waitForSelector('#name', { timeout: 30000 });
-    await page.fill('#name', namespaceName);
+  // 填写唯一 namespace 名称
+  const namespaceName = `test-${Date.now()}`;
+  await page.waitForSelector('#name', { timeout: 30000 });
+  await page.fill('#name', namespaceName);
 
-    // 提交创建
-    await page.click('label:has-text("No")');
-    await page.click('button:has-text("Submit")');
+  // 提交创建
+  await page.click('label:has-text("No")');
+  await page.click('button:has-text("Submit")');
 
-    // 搜索并验证 namespace 已创建
-    const searchBox = page.getByPlaceholder('Search by Name');
-    await searchBox.fill(namespaceName);
-    await searchBox.press('Enter');
-    await page.waitForTimeout(1000);
+  // 搜索并验证 namespace 已创建
+  const searchBox = page.getByPlaceholder('Search by Name');
+  await searchBox.fill(namespaceName);
+  await searchBox.press('Enter');
+  await page.waitForTimeout(1000);
 
-    await page.waitForSelector(`tr:has-text("${namespaceName}")`, { timeout: 60000 });
-    await expect(page.locator('table')).toContainText(namespaceName);
+  await page.waitForSelector(`tr:has-text("${namespaceName}")`, {
+    timeout: 60000,
+  });
+  await expect(page.locator('table')).toContainText(namespaceName);
 
-    await page.screenshot({ path: 'debug-namespace-create.png', fullPage: true });
+  await page.screenshot({ path: 'debug-namespace-create.png', fullPage: true });
 });

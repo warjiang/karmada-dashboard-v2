@@ -25,23 +25,25 @@ const basePath = '/multicloud-resource-manage';
 const token = process.env.KARMADA_TOKEN || '';
 
 test.beforeEach(async ({ page }) => {
-    await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
-    await page.evaluate((t) => localStorage.setItem('token', t), token);
-    await page.reload({ waitUntil: 'networkidle' });
-    await page.waitForSelector('text=Dashboard', { timeout: 30000 });
+  await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle' });
+  await page.evaluate((t) => localStorage.setItem('token', t), token);
+  await page.goto(`${baseURL}${basePath}`, { waitUntil: 'networkidle' });
+  console.log('token is', token);
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.waitForSelector('text=Dashboard', { timeout: 30000 });
 });
 
 test('should display namespace list', async ({ page }) => {
-    // 打开 Namespaces 页面
-    await page.waitForSelector('text=Namespaces', { timeout: 60000 });
-    await page.click('text=Namespaces');
+  // 打开 Namespaces 页面
+  await page.waitForSelector('text=Namespaces', { timeout: 60000 });
+  await page.click('text=Namespaces');
 
-    // 获取表格元素并验证可见
-    const table = page.locator('table');
-    await expect(table).toBeVisible({ timeout: 30000 });
+  // 获取表格元素并验证可见
+  const table = page.locator('table');
+  await expect(table).toBeVisible({ timeout: 30000 });
 
-    // 验证表格中包含默认 namespace
-    await expect(table).toContainText('default');
+  // 验证表格中包含默认 namespace
+  await expect(table).toContainText('default');
 
-    await page.screenshot({ path: 'debug-namespace-list.png', fullPage: true });
+  await page.screenshot({ path: 'debug-namespace-list.png', fullPage: true });
 });
