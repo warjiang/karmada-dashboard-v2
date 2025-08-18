@@ -125,13 +125,13 @@ jobs:
 
       - name: Generate KARMADA_TOKEN for CI
         run: |
-          kubectl create sa e2e-test -n kube-system
-          kubectl create clusterrolebinding e2e-test-binding \
+          kubectl --context=karmada-apiserver create sa e2e-test -n kube-system
+          kubectl --context=karmada-apiserver create clusterrolebinding e2e-test-binding \
             --clusterrole=cluster-admin \
             --serviceaccount=kube-system:e2e-test
           
           # 使用 kubectl create token 命令生成临时 token
-          TOKEN=$(kubectl create token e2e-test -n kube-system --duration=3600s)
+          TOKEN=$(kubectl --context=karmada-apiserver create token e2e-test -n kube-system --duration=3600s)
           echo "KARMADA_TOKEN=$TOKEN" >> $GITHUB_ENV
 
       - name: Checkout dashboard repo
