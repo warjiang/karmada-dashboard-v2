@@ -42,3 +42,17 @@ func EnsureMemberClusterMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// AuthMiddleware checks if the request has an Authorization header.
+func AuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Header.Get("Authorization") == "" {
+			c.AbortWithStatusJSON(http.StatusForbidden, common.BaseResponse{
+				Code: http.StatusForbidden,
+				Msg:  "Forbidden",
+			})
+			return
+		}
+		c.Next()
+	}
+}
