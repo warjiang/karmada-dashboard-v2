@@ -35,10 +35,18 @@ import (
 )
 
 func handleGetPropagationPolicyList(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	dataSelect := common.ParseDataSelectPathParameter(c)
 	namespace := common.ParseNamespacePathParameter(c)
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	propagationList, err := propagationpolicy.GetPropagationPolicyList(karmadaClient, k8sClient, namespace, dataSelect)
 	if err != nil {
 		klog.ErrorS(err, "Failed to GetPropagationPolicyList")
@@ -48,7 +56,11 @@ func handleGetPropagationPolicyList(c *gin.Context) {
 	common.Success(c, propagationList)
 }
 func handleGetPropagationPolicyDetail(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("propagationPolicyName")
 	result, err := propagationpolicy.GetPropagationPolicyDetail(karmadaClient, namespace, name)
@@ -71,8 +83,11 @@ func handlePostPropagationPolicy(c *gin.Context) {
 		propagationpolicyRequest.Namespace = "default"
 	}
 
-	var err error
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	if propagationpolicyRequest.IsClusterScope {
 		clusterpropagationPolicy := v1alpha1.ClusterPropagationPolicy{}
 		if err = yaml.Unmarshal([]byte(propagationpolicyRequest.PropagationData), &clusterpropagationPolicy); err != nil {
@@ -104,8 +119,11 @@ func handlePutPropagationPolicy(c *gin.Context) {
 		common.Fail(c, err)
 		return
 	}
-	var err error
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	// todo check pp exist
 	if propagationpolicyRequest.IsClusterScope {
 		clusterpropagationPolicy := v1alpha1.ClusterPropagationPolicy{}
@@ -145,8 +163,11 @@ func handleDeletePropagationPolicy(c *gin.Context) {
 		common.Fail(c, err)
 		return
 	}
-	var err error
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	if propagationpolicyRequest.IsClusterScope {
 		err = karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().Delete(ctx, propagationpolicyRequest.Name, metav1.DeleteOptions{})
 		if err != nil {

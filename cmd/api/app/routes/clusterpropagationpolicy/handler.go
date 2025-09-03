@@ -33,7 +33,11 @@ import (
 )
 
 func handleGetClusterPropagationPolicyList(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	dataSelect := common.ParseDataSelectPathParameter(c)
 	clusterPropagationList, err := clusterpropagationpolicy.GetClusterPropagationPolicyList(karmadaClient, dataSelect)
 	if err != nil {
@@ -45,7 +49,11 @@ func handleGetClusterPropagationPolicyList(c *gin.Context) {
 }
 
 func handleGetClusterPropagationPolicyDetail(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	name := c.Param("clusterPropagationPolicyName")
 	result, err := clusterpropagationpolicy.GetClusterPropagationPolicyDetail(karmadaClient, name)
 	if err != nil {
@@ -65,7 +73,11 @@ func handlePostClusterPropagationPolicy(c *gin.Context) {
 	}
 
 	var err error
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	if propagationpolicyRequest.IsClusterScope {
 		clusterPropagationPolicy := v1alpha1.ClusterPropagationPolicy{}
 		if err = yaml.Unmarshal([]byte(propagationpolicyRequest.PropagationData), &clusterPropagationPolicy); err != nil {

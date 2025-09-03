@@ -26,7 +26,11 @@ import (
 )
 
 func handleGetServices(c *gin.Context) {
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	dataSelect := common.ParseDataSelectPathParameter(c)
 	nsQuery := common.ParseNamespacePathParameter(c)
 	result, err := service.GetServiceList(k8sClient, nsQuery, dataSelect)
@@ -38,7 +42,11 @@ func handleGetServices(c *gin.Context) {
 }
 
 func handleGetServiceDetail(c *gin.Context) {
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("service")
 	result, err := service.GetServiceDetail(k8sClient, namespace, name)
@@ -50,7 +58,11 @@ func handleGetServiceDetail(c *gin.Context) {
 }
 
 func handleGetServiceEvents(c *gin.Context) {
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("service")
 	dataSelect := common.ParseDataSelectPathParameter(c)

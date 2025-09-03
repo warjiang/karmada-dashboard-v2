@@ -33,7 +33,11 @@ import (
 )
 
 func handleGetClusterOverridePolicyList(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	dataSelect := common.ParseDataSelectPathParameter(c)
 	clusterOverrideList, err := clusteroverridepolicy.GetClusterOverridePolicyList(karmadaClient, dataSelect)
 	if err != nil {
@@ -45,7 +49,11 @@ func handleGetClusterOverridePolicyList(c *gin.Context) {
 }
 
 func handleGetClusterOverridePolicyDetail(c *gin.Context) {
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	name := c.Param("clusterOverridePolicyName")
 	result, err := clusteroverridepolicy.GetClusterOverridePolicyDetail(karmadaClient, name)
 	if err != nil {
@@ -65,7 +73,11 @@ func handlePostClusterOverridePolicy(c *gin.Context) {
 	}
 
 	var err error
-	karmadaClient := client.InClusterKarmadaClient()
+	karmadaClient, err := client.GetKarmadaClientFromRequest(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	if overridepolicyRequest.IsClusterScope {
 		clusterOverridePolicy := v1alpha1.ClusterOverridePolicy{}
 		if err = yaml.Unmarshal([]byte(overridepolicyRequest.OverrideData), &clusterOverridePolicy); err != nil {
