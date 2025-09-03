@@ -125,3 +125,19 @@ func karmadaClientFromRequest(request *http.Request) (karmadaclientset.Interface
 
 	return karmadaclientset.NewForConfig(config)
 }
+
+func GetKarmadaClientFromRequestForKarmadaAPIServer(request *http.Request) (kubeclient.Interface, error) {
+	if !isKarmadaInitialized() {
+		return nil, fmt.Errorf("client package not initialized")
+	}
+	return karmadaClientForKarmadaAPIServerFromRequest(request)
+}
+
+func karmadaClientForKarmadaAPIServerFromRequest(request *http.Request) (kubeclient.Interface, error) {
+	config, err := karmadaConfigFromRequest(request)
+	if err != nil {
+		return nil, err
+	}
+
+	return kubeclient.NewForConfig(config)
+}
