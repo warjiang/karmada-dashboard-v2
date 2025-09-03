@@ -26,7 +26,11 @@ import (
 )
 
 func handleGetIngress(c *gin.Context) {
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	dataSelect := common.ParseDataSelectPathParameter(c)
 	nsQuery := common.ParseNamespacePathParameter(c)
 	result, err := ingress.GetIngressList(k8sClient, nsQuery, dataSelect)
@@ -38,7 +42,11 @@ func handleGetIngress(c *gin.Context) {
 }
 
 func handleGetIngressDetail(c *gin.Context) {
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	namespace := c.Param("namespace")
 	name := c.Param("service")
 	result, err := ingress.GetIngressDetail(k8sClient, namespace, name)

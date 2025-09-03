@@ -29,7 +29,11 @@ import (
 func handleGetJob(c *gin.Context) {
 	namespace := common.ParseNamespacePathParameter(c)
 	dataSelect := common.ParseDataSelectPathParameter(c)
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	result, err := job.GetJobList(k8sClient, namespace, dataSelect)
 	if err != nil {
 		common.Fail(c, err)
@@ -41,7 +45,11 @@ func handleGetJob(c *gin.Context) {
 func handleGetJobDetail(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("statefulset")
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	result, err := job.GetJobDetail(k8sClient, namespace, name)
 	if err != nil {
 		common.Fail(c, err)
@@ -53,7 +61,11 @@ func handleGetJobDetail(c *gin.Context) {
 func handleGetJobEvents(c *gin.Context) {
 	namespace := c.Param("namespace")
 	name := c.Param("statefulset")
-	k8sClient := client.InClusterClientForKarmadaAPIServer()
+	k8sClient, err := client.GetKarmadaClientFromRequestForKarmadaAPIServer(c.Request)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
 	dataSelect := common.ParseDataSelectPathParameter(c)
 	result, err := event.GetResourceEvents(k8sClient, dataSelect, namespace, name)
 	if err != nil {
