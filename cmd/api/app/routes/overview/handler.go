@@ -18,11 +18,11 @@ package overview
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/karmada-io/dashboard/pkg/client"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
 	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
+	"github.com/karmada-io/dashboard/pkg/client"
 )
 
 func handleGetOverview(c *gin.Context) {
