@@ -45,6 +45,12 @@ func restConfigFromRequest(request *http.Request) (*rest.Config, error) {
 func buildConfigFromAuthInfo(authInfo *clientcmdapi.AuthInfo) (*rest.Config, error) {
 	cmdCfg := clientcmdapi.NewConfig()
 
+	karmadaRestConfig = &rest.Config{
+		Host: "https://172.18.0.5:5443",
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: true,
+		},
+	}
 	cmdCfg.Clusters[DefaultCmdConfigName] = &clientcmdapi.Cluster{
 		Server:                   karmadaRestConfig.Host,
 		CertificateAuthority:     karmadaRestConfig.TLSClientConfig.CAFile,

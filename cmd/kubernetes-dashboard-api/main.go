@@ -50,14 +50,14 @@ func main() {
 			client.WithInsecureTLSSkipVerify(args.ApiServerSkipTLSVerify()),
 		)
 	*/
-	karmadaclient.InitKarmadaConfig(
-		karmadaclient.WithUserAgent(environment.UserAgent()),
-		karmadaclient.WithKubeconfig(args.KarmadaKubeConfigPath()),
-		karmadaclient.WithKubeContext(args.KarmadaContext()),
-		karmadaclient.WithInsecureTLSSkipVerify(args.KarmadaApiserverSkipTLSVerify()),
-	)
+	//karmadaclient.InitKarmadaConfig(
+	//	karmadaclient.WithUserAgent(environment.UserAgent()),
+	//	karmadaclient.WithKubeconfig(args.KarmadaKubeConfigPath()),
+	//	karmadaclient.WithKubeContext(args.KarmadaContext()),
+	//	karmadaclient.WithInsecureTLSSkipVerify(args.KarmadaApiserverSkipTLSVerify()),
+	//)
 	if !args.IsProxyEnabled() {
-		ensureAPIServerConnectionOrDie()
+		//ensureAPIServerConnectionOrDie()
 	} else {
 		klog.Info("Running in proxy mode. InClusterClient connections will be disabled.")
 	}

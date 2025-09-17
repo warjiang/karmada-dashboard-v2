@@ -147,9 +147,9 @@ func karmadaClientForKarmadaAPIServerFromRequest(request *http.Request) (kubecli
 // GetClientForMemberClusterFromRequest creates a Kubernetes clientset from an HTTP request
 // for a member cluster APIServer, based on `Authorization` header
 func GetClientForMemberClusterFromRequest(request *http.Request) (kubeclient.Interface, error) {
-	if !isKarmadaInitialized() {
-		return nil, fmt.Errorf("client package not initialized")
-	}
+	//if !isKarmadaInitialized() {
+	//	return nil, fmt.Errorf("client package not initialized")
+	//}
 
 	memberClusterName := request.Header.Get(MemberClusterHeaderName)
 	if memberClusterName == "" {
