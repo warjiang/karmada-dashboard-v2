@@ -1,0 +1,44 @@
+# kubectl --kubeconfig ~/.kube/karmada.config --context karmada-apiserver delete clusterrolebinding/cluster-proxy-clusterrolebinding
+
+# clusterrole/cluster-admin
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: cluster-admin
+rules:
+  - apiGroups:
+      - '*'
+    resources:
+      - '*'
+    verbs:
+      - '*'
+  - nonResourceURLs:
+      - '*'
+    verbs:
+      - '*'
+---
+# cluster-proxy-clusterrole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-proxy-clusterrole
+rules:
+  - apiGroups:
+      - 'cluster.karmada.io'
+    resources:
+      - clusters/proxy
+    resourceNames:
+      - member1
+    verbs:
+      - '*'
+  - apiGroups:
+      - cluster.karmada.io
+    resources:
+      - clusters
+    verbs:
+      - list
+      - get
