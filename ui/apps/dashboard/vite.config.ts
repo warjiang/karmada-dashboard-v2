@@ -52,6 +52,9 @@ export default defineConfig(({ mode }) => {
         transformIndexHtml: true,
       }),
     ],
+    // optimizeDeps: {
+    //   exclude: ['@ant-design/icons']
+    // },
     resolve: {
       alias: [{ find: '@', replacement: path.resolve(__dirname, 'src') }],
     },

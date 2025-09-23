@@ -110,7 +110,8 @@ export const FloatingChat: React.FC<ChatUIProps> = ({
   const currentControllerRef = useRef<AbortController | null>(null);
   const apiRef = useRef<ChatAPI>(new ChatAPI(apiConfig));
 
-  const { messages, appendMsg, updateMsg } = useMessages(DEFAULT_MESSAGES);
+  const { messages, appendMsg, updateMsg, deleteMsg } =
+    useMessages(DEFAULT_MESSAGES);
 
   // Update API config when props change
   useEffect(() => {
@@ -185,23 +186,36 @@ export const FloatingChat: React.FC<ChatUIProps> = ({
   const handleStream = async (val: string, shouldUseMCP: boolean) => {
     const controller = new AbortController();
     currentControllerRef.current = controller;
-
+    let botMessageId: number | null = null; // Date.now()
     const botMessage = {
       type: "text",
-      content: { text: "" },
+      content: { text: "thinking" },
       position: "left" as const,
       user: { avatar, name: "Assistant" },
+      _id: -1,
     };
-    const botMessageId = appendMsg(botMessage);
+    appendMsg(botMessage);
     let streamingText = "";
 
     const onData = (data: string) => {
       if (controller.signal.aborted) return;
+      if (!botMessageId) {
+        deleteMsg(-1);
+
+        botMessageId = Date.now();
+        appendMsg({
+          ...botMessage,
+          _id: botMessageId,
+        });
+      }
+
       streamingText += data;
-      updateMsg(botMessageId, {
-        ...botMessage,
-        content: { text: streamingText },
-      });
+      botMessageId &&
+        updateMsg(botMessageId, {
+          ...botMessage,
+          _id: botMessageId,
+          content: { text: streamingText },
+        });
     };
 
     const onError = (error: any) => {
@@ -209,15 +223,17 @@ export const FloatingChat: React.FC<ChatUIProps> = ({
       const errorMessage =
         error instanceof Error ? error.message : "Problem processing request";
       const prefix = shouldUseMCP ? "MCP Error" : "API Error";
-      updateMsg(botMessageId, {
-        type: "text",
-        content: { text: `${prefix}: ${errorMessage}` },
-        position: "left",
-        user: { avatar: "❌", name: "Error" },
-      });
+      botMessageId &&
+        updateMsg(botMessageId, {
+          type: "text",
+          content: { text: `${prefix}: ${errorMessage}` },
+          position: "left",
+          user: { avatar: "❌", name: "Error" },
+        });
     };
 
     const onComplete = () => {
+      botMessageId = null;
       if (controller.signal.aborted) return;
       if (currentControllerRef.current === controller) {
         currentControllerRef.current = null;
@@ -231,6 +247,7 @@ export const FloatingChat: React.FC<ChatUIProps> = ({
           onData,
           (toolCall) => {
             if (controller.signal.aborted) return;
+            deleteMsg(-1);
             appendMsg({
               type: "tool_call",
               content: { text: formatToolCall(toolCall), toolCall },

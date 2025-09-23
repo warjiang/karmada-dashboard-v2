@@ -39,7 +39,7 @@ export default defineConfig({
   clean: true,
   format: ["cjs", "esm"],
   external: ["react", "react-dom"],
-  dts: false, // 暂时禁用类型定义生成
+  dts: true, // 暂时禁用类型定义生成
   banner: {
     js: license,
   },
