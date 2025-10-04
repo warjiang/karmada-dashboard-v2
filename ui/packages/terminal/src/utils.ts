@@ -39,3 +39,9 @@ export function getDebugger(name: string) {
   debuggerStore[name] = debug(name);
   return debuggerStore[name];
 }
+
+export function convertRecordToQuery(rs: Record<string, string>) {
+  return Object.keys(rs)
+    .map((k) => `${k}=${rs[k]}`)
+    .join('&');
+}

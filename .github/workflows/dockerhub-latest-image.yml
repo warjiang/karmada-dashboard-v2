@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feat/*
 
 permissions:
   contents: read
@@ -11,7 +12,7 @@ permissions:
 jobs:
   build-fronted:
     name: build frontend bundle
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+#    if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     steps:
       - name: checkout code
@@ -40,11 +41,11 @@ jobs:
 
   build-and-push-web:
     name: build and push web image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+#    if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     needs: [ "build-fronted" ]
     env:
-      IMAGE_NAME: karmada/karmada-dashboard-web
+      IMAGE_NAME: warjiang/karmada-dashboard-web
       BINARY_NAME: karmada-dashboard-web
       PLATFORMS: linux/amd64,linux/arm64
     steps:
@@ -95,10 +96,10 @@ jobs:
 
   build-and-push-api:
     name: build and push api image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+#    if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     env:
-      IMAGE_NAME: karmada/karmada-dashboard-api
+      IMAGE_NAME: warjiang/karmada-dashboard-api
       BINARY_NAME: karmada-dashboard-api
       PLATFORMS: linux/amd64,linux/arm64
     steps:
