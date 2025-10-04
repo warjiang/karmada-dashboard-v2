@@ -17,7 +17,7 @@ limitations under the License.
 import SockJS from 'sockjs-client/dist/sockjs';
 import BaseTerminal from './base.ts';
 import { BaseTerminalOptions } from './typing';
-import { getDebugger } from './utils.ts';
+import { convertRecordToQuery, getDebugger } from './utils.ts';
 
 interface ContainerTerminalOptions {
   namespace: string;
@@ -69,6 +69,7 @@ class ContainerTerminal extends BaseTerminal {
   ) {
     super(options);
     this.containerOptions = containerOptions;
+    this.containerOptions.extraHeader = this.containerOptions.extraHeader || {};
   }
 
   public getSessionId = async () => {
@@ -81,7 +82,7 @@ class ContainerTerminal extends BaseTerminal {
       log(`request url: ${replacedUrl}`);
       const resp = await fetch(replacedUrl, {
         method: 'GET',
-        headers: this.containerOptions.extraHeader || {},
+        headers: this.containerOptions.extraHeader,
       });
       if (resp.ok) {
         const json = await resp.json();
@@ -106,9 +107,9 @@ class ContainerTerminal extends BaseTerminal {
     this.connectionClosed = false;
 
     const wsUrl = this.containerOptions.wsUrl ?? '/api/sockjs';
-    this.socket = new SockJS(`${wsUrl}?${this.sessionId}`, {
-      headers: this.containerOptions.extraHeader || {},
-    });
+    this.socket = new SockJS(
+      `${wsUrl}?${this.sessionId}&${convertRecordToQuery(this.containerOptions.extraHeader!)}`,
+    );
     const { socket } = this;
     socket.onopen = this.onConnectionOpen.bind(this, this.sessionId);
     socket.onmessage = this.onConnectionMessage.bind(this);
