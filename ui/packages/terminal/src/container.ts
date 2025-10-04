@@ -25,6 +25,7 @@ interface ContainerTerminalOptions {
   container: string;
   sessionIdUrl: string;
   wsUrl?: string;
+  extraHeader?: Record<string, string>;
 }
 
 export interface SockJSSimpleEvent {
@@ -78,7 +79,10 @@ class ContainerTerminal extends BaseTerminal {
         .replace('{{pod}}', this.containerOptions.pod)
         .replace('{{container}}', this.containerOptions.container);
       log(`request url: ${replacedUrl}`);
-      const resp = await fetch(replacedUrl);
+      const resp = await fetch(replacedUrl, {
+        method: 'GET',
+        headers: this.containerOptions.extraHeader || {},
+      });
       if (resp.ok) {
         const json = await resp.json();
         this.sessionId = json.data.id;
@@ -102,7 +106,9 @@ class ContainerTerminal extends BaseTerminal {
     this.connectionClosed = false;
 
     const wsUrl = this.containerOptions.wsUrl ?? '/api/sockjs';
-    this.socket = new SockJS(`${wsUrl}?${this.sessionId}`);
+    this.socket = new SockJS(`${wsUrl}?${this.sessionId}`, {
+      headers: this.containerOptions.extraHeader || {},
+    });
     const { socket } = this;
     socket.onopen = this.onConnectionOpen.bind(this, this.sessionId);
     socket.onmessage = this.onConnectionMessage.bind(this);
