@@ -1,4 +1,4 @@
-package mcp
+package mcpproxy
 
 import "github.com/mark3labs/mcp-go/mcp"
 

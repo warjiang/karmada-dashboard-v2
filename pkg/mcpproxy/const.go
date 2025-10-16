@@ -1,4 +1,4 @@
-package mcp
+package mcpproxy
 
 const (
 	McpClientName    = "Karmada-Dashboard-MCP-Client"
