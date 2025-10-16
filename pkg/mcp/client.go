@@ -20,84 +20,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/sashabaranov/go-openai"
-	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
-
-	"github.com/karmada-io/dashboard/cmd/api/app/options"
 )
-
-// Global variables for singleton pattern
-var (
-	mcpClientInstance *MCPClient
-	mcpClientMutex    sync.Mutex
-	shutdownChan      chan os.Signal
-	globalMCPOptions  *options.Options
-	mcpInitialized    bool
-)
-
-// init sets up signal handling for graceful shutdown
-func init() {
-	shutdownChan = make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-shutdownChan
-		klog.Infof("Received shutdown signal, closing MCP client...")
-		ResetMCPClient()
-	}()
-}
-
-// TransportMode defines the MCP transport mode
-type TransportMode string
-
-const (
-	// TransportModeStdio represents the stdio transport mode for MCP communication
-	TransportModeStdio TransportMode = "stdio"
-	// TransportModeSSE represents the Server-Sent Events transport mode.
-	TransportModeSSE TransportMode = "sse"
-)
-
-// MCPTool represents a tool available from the MCP server.
-type MCPTool struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	InputSchema struct {
-		Type       string                 `json:"type"`
-		Properties map[string]interface{} `json:"properties"`
-		Required   []string               `json:"required,omitempty"`
-	} `json:"inputSchema"`
-}
-
-// MCPConfig holds configuration for initializing the MCP client.
-type MCPConfig struct {
-	// Transport configuration
-	TransportMode TransportMode
-	ServerPath    string
-	SSEEndpoint   string
-
-	// Kubernetes configuration
-	KubeconfigPath string
-	KarmadaContext string
-
-	// Connection settings
-	ConnectTimeout time.Duration
-	RequestTimeout time.Duration
-	MaxRetries     int
-
-	// Feature flags
-	EnableMCP bool
-}
 
 // MCPClient manages the lifecycle and communication with an MCP server.
 type MCPClient struct {
@@ -112,176 +44,17 @@ type MCPClient struct {
 	closed             bool
 }
 
-// DefaultMCPConfig returns default configuration
-func DefaultMCPConfig() *MCPConfig {
-	return &MCPConfig{
-		TransportMode:  TransportModeStdio,
-		KarmadaContext: "karmada-apiserver",
-		ConnectTimeout: 45 * time.Second,
-		RequestTimeout: 60 * time.Second,
-		MaxRetries:     3,
-		EnableMCP:      true,
-	}
-}
-
-// loadMCPConfigFromOptions loads configuration from Options and validates them.
-func loadMCPConfigFromOptions(opts *options.Options) (*MCPConfig, error) {
-	config := DefaultMCPConfig()
-
-	// Load configuration from Options instead of environment variables
-	config.EnableMCP = opts.EnableMCP
-
-	// Load transport mode
-	switch strings.ToLower(opts.MCPTransportMode) {
-	case "stdio":
-		config.TransportMode = TransportModeStdio
-	case "sse":
-		config.TransportMode = TransportModeSSE
-	default:
-		return nil, fmt.Errorf("unsupported transport mode: %s", opts.MCPTransportMode)
-	}
-
-	// Load server path (required for stdio mode)
-	if opts.MCPServerPath != "" {
-		config.ServerPath = opts.MCPServerPath
-	} else if config.TransportMode == TransportModeStdio {
-		return nil, errors.New("--mcp-server-path flag required for stdio mode")
-	}
-
-	// Load SSE endpoint (required for SSE mode)
-	if opts.MCPSSEEndpoint != "" {
-		config.SSEEndpoint = opts.MCPSSEEndpoint
-	} else if config.TransportMode == TransportModeSSE {
-		return nil, errors.New("--mcp-sse-endpoint flag required for SSE mode")
-	}
-
-	// Use Options' existing Karmada configuration
-	config.KubeconfigPath = opts.KarmadaKubeConfig
-	config.KarmadaContext = opts.KarmadaContext
-
-	// Set default kubeconfig path if not provided
-	if config.KubeconfigPath == "" {
-		config.KubeconfigPath = fmt.Sprintf("%s/.kube/karmada.config", homedir.HomeDir())
-	}
-
-	// Set default context if not provided
-	if config.KarmadaContext == "" {
-		config.KarmadaContext = "karmada-apiserver"
-	}
-
-	// Validate configuration
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid MCP configuration: %w", err)
-	}
-
-	klog.Infof("MCP configuration loaded: transport=%s, server=%s, kubeconfig=%s",
-		config.TransportMode, config.ServerPath, config.KubeconfigPath)
-
-	return config, nil
-}
-
-// InitMCPConfig initializes MCP configuration from Options.
-func InitMCPConfig(opts *options.Options) {
-	mcpClientMutex.Lock()
-	defer mcpClientMutex.Unlock()
-
-	globalMCPOptions = opts
-	mcpInitialized = true
-
-	klog.InfoS("MCP configuration initialized",
-		"enabled", opts.EnableMCP,
-		"transport", opts.MCPTransportMode,
-		"serverPath", opts.MCPServerPath,
-		"sseEndpoint", opts.MCPSSEEndpoint)
-}
-
-// Validate checks if the configuration is valid
-func (c *MCPConfig) Validate() error {
-	// Validate transport mode
-	switch c.TransportMode {
-	case TransportModeStdio:
-		if c.ServerPath == "" {
-			return errors.New("server path is required for stdio transport mode")
-		}
-		// Only check if file exists, don't fail if it doesn't (might be in PATH)
-		if _, err := os.Stat(c.ServerPath); err != nil {
-			klog.Warningf("MCP server not found at %s, assuming it's in PATH: %v", c.ServerPath, err)
-		}
-	case TransportModeSSE:
-		if c.SSEEndpoint == "" {
-			return errors.New("SSE endpoint is required for SSE transport mode")
-		}
-	default:
-		return fmt.Errorf("unsupported transport mode: %s", c.TransportMode)
-	}
-
-	// Only warn about kubeconfig, don't fail
-	if _, err := os.Stat(c.KubeconfigPath); err != nil {
-		klog.Warningf("Kubeconfig not found at %s: %v", c.KubeconfigPath, err)
-	}
-
-	return nil
-}
-
-// GetMCPClient returns a singleton MCP client instance using global configuration.
-func GetMCPClient() (*MCPClient, error) {
-	mcpClientMutex.Lock()
-	defer mcpClientMutex.Unlock()
-
-	// Check if MCP is initialized
-	if !mcpInitialized || globalMCPOptions == nil {
-		return nil, errors.New("MCP not initialized, call InitMCPConfig first")
-	}
-
-	// Check if MCP is enabled
-	if !globalMCPOptions.EnableMCP {
-		return nil, errors.New("MCP is not enabled")
-	}
-
-	// If instance exists and is not closed, return it
-	if mcpClientInstance != nil && !mcpClientInstance.closed {
-		return mcpClientInstance, nil
-	}
-
-	// Create new instance
-	klog.Infof("Creating new MCP client instance from global configuration...")
-	client, err := NewMCPClientFromOptions(globalMCPOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	mcpClientInstance = client
-	return mcpClientInstance, nil
-}
-
-// ResetMCPClient resets the singleton instance (for testing or error recovery)
-func ResetMCPClient() {
-	mcpClientMutex.Lock()
-	defer mcpClientMutex.Unlock()
-
-	if mcpClientInstance != nil {
-		mcpClientInstance.Close()
-		mcpClientInstance = nil
-	}
-}
-
-// NewMCPClientFromOptions creates and initializes a new MCP client using Options.
-func NewMCPClientFromOptions(opts *options.Options) (*MCPClient, error) {
-	cfg, err := loadMCPConfigFromOptions(opts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load MCP config from options: %w", err)
-	}
-
-	client := &MCPClient{
+// NewMCPClient will create a new MCP client with the given configuration.
+func NewMCPClient(cfg *MCPConfig) (*MCPClient, error) {
+	mcpClient := &MCPClient{
 		config: cfg,
 	}
-
-	if err := client.initialize(); err != nil {
-		client.Close()
+	if err := mcpClient.initialize(); err != nil {
+		mcpClient.Close()
 		return nil, err
 	}
 
-	return client, nil
+	return mcpClient, nil
 }
 
 // initialize sets up the MCP client based on the transport mode
@@ -318,7 +91,7 @@ func (c *MCPClient) initializeStdioClient() error {
 		nil,
 		"stdio",
 		"--karmada-kubeconfig="+c.config.KubeconfigPath,
-		"--karmada-context="+c.config.KarmadaContext,
+		"--karmada-context="+c.config.KubeconfigContext,
 	)
 
 	// Create client with the transport
@@ -341,8 +114,8 @@ func (c *MCPClient) initializeStdioClient() error {
 	initRequest := mcp.InitializeRequest{}
 	initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
 	initRequest.Params.ClientInfo = mcp.Implementation{
-		Name:    "Karmada-Dashboard-MCP-Client",
-		Version: "0.0.0-dev",
+		Name:    McpClientName,
+		Version: McpClientVersion,
 	}
 	initRequest.Params.Capabilities = mcp.ClientCapabilities{}
 
@@ -403,8 +176,8 @@ func (c *MCPClient) initializeSSEClient() error {
 	initRequest := mcp.InitializeRequest{}
 	initRequest.Params.ProtocolVersion = mcp.LATEST_PROTOCOL_VERSION
 	initRequest.Params.ClientInfo = mcp.Implementation{
-		Name:    "Karmada-Dashboard-MCP-Client",
-		Version: "0.0.0-dev",
+		Name:    McpClientName,
+		Version: McpClientVersion,
 	}
 	initRequest.Params.Capabilities = mcp.ClientCapabilities{}
 
@@ -498,16 +271,7 @@ func (c *MCPClient) GetTools() []MCPTool {
 	// Convert and return tools
 	tools := make([]MCPTool, 0, len(c.availableTools))
 	for _, tool := range c.availableTools {
-		mcpTool := MCPTool{
-			Name:        tool.Name,
-			Description: tool.Description,
-		}
-
-		// Convert input schema
-		mcpTool.InputSchema.Type = tool.InputSchema.Type
-		mcpTool.InputSchema.Properties = tool.InputSchema.Properties
-		mcpTool.InputSchema.Required = tool.InputSchema.Required
-
+		mcpTool := FromStandardTool(tool)
 		tools = append(tools, mcpTool)
 	}
 	return tools
