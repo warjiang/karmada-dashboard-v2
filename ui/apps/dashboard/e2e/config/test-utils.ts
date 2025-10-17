@@ -77,11 +77,14 @@ export async function createK8sResource<ResourceType extends keyof typeof RESOUR
             yamlObject.metadata = {};
         }
         yamlObject.metadata.namespace = namespace;
-
         const k8sApi = createKarmadaApiClient(config.apiClientConstructor);
 
+        await k8sApi.createNamespacedSecret({
+            namespace: namespace,
+            body: yamlObject
+        })
         // Use the configured createMethod to create the resource
-        await (k8sApi[config.createMethod] as any)({
+        await (k8sApi[config.createMethod])({
             namespace: namespace,
             body: yamlObject
         });
@@ -109,7 +112,7 @@ export async function deleteK8sResource<ResourceType extends keyof typeof RESOUR
         const k8sApi = createKarmadaApiClient(config.apiClientConstructor);
 
         // Use the configured deleteMethod to delete the resource
-        await (k8sApi[config.deleteMethod] as any)({
+        await (k8sApi[config.deleteMethod])({
             name: resourceName,
             namespace: namespace
         });

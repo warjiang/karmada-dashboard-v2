@@ -17,6 +17,10 @@ limitations under the License.
 import { test, expect } from '@playwright/test';
 import { setupDashboardAuthentication, generateTestConfigMapYaml, createK8sConfigMap, getConfigMapNameFromYaml, deleteK8sConfigMap } from './test-utils';
 import { setMonacoEditorContent, waitForResourceInList, debugScreenshot } from '../test-utils';
+import { IResponse } from '@/services/base.ts';
+import {DeepRequired} from "../../test-utils.ts";
+import * as k8s from '@kubernetes/client-node';
+
 
 test.beforeEach(async ({ page }) => {
     await setupDashboardAuthentication(page);
@@ -64,7 +68,7 @@ test('should edit configmap successfully', async ({ page }) => {
 
     // Wait for network request to complete and get response data
     const apiResponse = await apiRequestPromise;
-    const responseData = await apiResponse.json();
+    const responseData = await apiResponse.json() as IResponse<DeepRequired<k8s.V1ConfigMap>>;
 
     // Verify Monaco editor is loaded
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 });
