@@ -89,9 +89,7 @@ func (c *MCPClient) initializeStdioClient() error {
 	stdioTransport := transport.NewStdio(
 		c.config.ServerPath,
 		nil,
-		"stdio",
-		"--karmada-kubeconfig="+c.config.KubeconfigPath,
-		"--karmada-context="+c.config.KubeconfigContext,
+		c.config.StdioArguments...,
 	)
 
 	// Create client with the transport
@@ -335,9 +333,9 @@ func (c *MCPClient) Close() {
 	c.closed = true
 
 	// Cancel context first
-	if c.cancel != nil {
-		c.cancel()
-	}
+	//if c.cancel != nil {
+	//	c.cancel()
+	//}
 
 	// Close MCP client with timeout
 	if c.client != nil {
@@ -359,6 +357,10 @@ func (c *MCPClient) Close() {
 		case <-ctx.Done():
 			klog.Warningf("MCP client close timed out")
 		}
+		//err := c.client.Close()
+		//if err != nil {
+		//	klog.Warningf("Failed to close MCP client: %v", err)
+		//}
 	}
 
 	// Clear tools and resources

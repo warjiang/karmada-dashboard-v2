@@ -26,7 +26,8 @@ type MCPConfig struct {
 	MaxRetries     int
 
 	// Feature flags
-	EnableMCP bool
+	EnableMCP      bool
+	StdioArguments []string
 }
 
 // Validate checks if the configuration is valid
@@ -114,5 +115,11 @@ func WithKubeconfigPath(kubeconfigPath string) MCPConfigOption {
 func WithKubeconfigContext(kubeconfigContext string) MCPConfigOption {
 	return func(cfg *MCPConfig) {
 		cfg.KubeconfigContext = kubeconfigContext
+	}
+}
+
+func WithStdioArguments(stdioArguments ...string) MCPConfigOption {
+	return func(cfg *MCPConfig) {
+		cfg.StdioArguments = stdioArguments
 	}
 }
