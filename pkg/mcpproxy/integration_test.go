@@ -25,20 +25,22 @@ import (
 	"time"
 )
 
-// TestIntegration_RealMCPServer_SSE tests real MCP client-server communication using SSE transport
-func TestIntegration_RealMCPServer_SSE(t *testing.T) {
+// TestIntegration_MCPServer_SSE tests real MCP client-server communication using SSE transport
+func TestIntegration_MCPServer_SSE(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	// Create test MCP server using mcp-go framework
-	testServer := NewTestMCPServer()
-	sseEndpoint, cleanup := testServer.StartSSEServer()
-	defer cleanup()
+	addr := "localhost:8080"
+	testServer := NewTestSSEServer(addr)
+	go func() {
+		testServer.StartSSEServer()
+	}()
 
 	// Create MCP client with SSE configuration
 	config := NewMCPConfig(
-		WithSSEMode(sseEndpoint),
+		WithSSEMode(testServer.CompleteSseEndpoint()),
 		WithConnectTimeout(10*time.Second),
 		WithRequestTimeout(10*time.Second),
 	)
@@ -59,83 +61,81 @@ func TestIntegration_RealMCPServer_SSE(t *testing.T) {
 	if len(tools) == 0 {
 		t.Error("Expected to get tools from server")
 	}
-	/*
-		expectedTools := GetTestTools()
-		if len(tools) != len(expectedTools) {
-			t.Errorf("Expected %d tools, got %d", len(expectedTools), len(tools))
+	expectedTools := GetTestTools()
+	if len(tools) != len(expectedTools) {
+		t.Errorf("Expected %d tools, got %d", len(expectedTools), len(tools))
+	}
+
+	// Verify tool names match
+	toolNames := make(map[string]bool)
+	for _, tool := range tools {
+		toolNames[tool.Name] = true
+	}
+
+	for _, expectedTool := range expectedTools {
+		if !toolNames[expectedTool.Name] {
+			t.Errorf("Expected tool %s not found", expectedTool.Name)
 		}
+	}
 
-		// Verify tool names match
-		toolNames := make(map[string]bool)
-		for _, tool := range tools {
-			toolNames[tool.Name] = true
-		}
+	// Test 3: List available resources
+	resources, err := client.ListResources()
+	if err != nil {
+		t.Fatalf("Failed to list resources: %v", err)
+	}
 
-		for _, expectedTool := range expectedTools {
-			if !toolNames[expectedTool.Name] {
-				t.Errorf("Expected tool %s not found", expectedTool.Name)
-			}
-		}
+	expectedResources := GetTestResources()
+	if len(resources) != len(expectedResources) {
+		t.Errorf("Expected %d resources, got %d", len(expectedResources), len(resources))
+	}
 
-		// Test 3: List available resources
-		resources, err := client.ListResources()
-		if err != nil {
-			t.Fatalf("Failed to list resources: %v", err)
-		}
-
-		expectedResources := GetTestResources()
-		if len(resources) != len(expectedResources) {
-			t.Errorf("Expected %d resources, got %d", len(expectedResources), len(resources))
-		}
-
-		// Test 4: Call tools with different parameters
-		t.Run("ToolCalls", func(t *testing.T) {
-			// Test echo tool
-			result, err := client.CallTool("test_echo", map[string]interface{}{
-				"message": "Hello, MCP!",
-				"prefix":  "Test: ",
-			})
-			if err != nil {
-				t.Errorf("Failed to call test_echo: %v", err)
-			}
-			expected := "Test: Hello, MCP!"
-			if result != expected {
-				t.Errorf("Expected %q, got %q", expected, result)
-			}
-
-			// Test calculate tool - addition
-			result, err = client.CallTool("test_calculate", map[string]interface{}{
-				"a":         10.5,
-				"b":         20.3,
-				"operation": "add",
-			})
-			if err != nil {
-				t.Errorf("Failed to call test_calculate: %v", err)
-			}
-			expected = "30.80"
-			if result != expected {
-				t.Errorf("Expected %q, got %q", expected, result)
-			}
-
-			// Test calculate tool - division
-			result, err = client.CallTool("test_calculate", map[string]interface{}{
-				"a":         100,
-				"b":         4,
-				"operation": "divide",
-			})
-			if err != nil {
-				t.Errorf("Failed to call test_calculate: %v", err)
-			}
-			expected = "25.00"
-			if result != expected {
-				t.Errorf("Expected %q, got %q", expected, result)
-			}
+	// Test 4: Call tools with different parameters
+	t.Run("ToolCalls", func(t *testing.T) {
+		// Test echo tool
+		result, err := client.CallTool("test_echo", map[string]interface{}{
+			"message": "Hello, MCP!",
+			"prefix":  "Test: ",
 		})
-	*/
+		if err != nil {
+			t.Errorf("Failed to call test_echo: %v", err)
+		}
+		expected := "Test: Hello, MCP!"
+		if result != expected {
+			t.Errorf("Expected %q, got %q", expected, result)
+		}
+
+		// Test calculate tool - addition
+		result, err = client.CallTool("test_calculate", map[string]interface{}{
+			"a":         10.5,
+			"b":         20.3,
+			"operation": "add",
+		})
+		if err != nil {
+			t.Errorf("Failed to call test_calculate: %v", err)
+		}
+		expected = "30.80"
+		if result != expected {
+			t.Errorf("Expected %q, got %q", expected, result)
+		}
+
+		// Test calculate tool - division
+		result, err = client.CallTool("test_calculate", map[string]interface{}{
+			"a":         100,
+			"b":         4,
+			"operation": "divide",
+		})
+		if err != nil {
+			t.Errorf("Failed to call test_calculate: %v", err)
+		}
+		expected = "25.00"
+		if result != expected {
+			t.Errorf("Expected %q, got %q", expected, result)
+		}
+	})
 }
 
-// TestIntegration_RealMCPServer_Stdio tests real MCP client-server communication using stdio transport
-func TestIntegration_RealMCPServer_Stdio(t *testing.T) {
+// TestIntegration_MCPServer_Stdio tests real MCP client-server communication using stdio transport
+func TestIntegration_MCPServer_Stdio(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
