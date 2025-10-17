@@ -328,14 +328,9 @@ func (c *MCPClient) Close() {
 	if c.closed {
 		return
 	}
-
-	klog.Infof("Closing MCP client...")
 	c.closed = true
 
-	// Cancel context first
-	//if c.cancel != nil {
-	//	c.cancel()
-	//}
+	klog.Infof("Closing MCP client...")
 
 	// Close MCP client with timeout
 	if c.client != nil {
@@ -357,10 +352,6 @@ func (c *MCPClient) Close() {
 		case <-ctx.Done():
 			klog.Warningf("MCP client close timed out")
 		}
-		//err := c.client.Close()
-		//if err != nil {
-		//	klog.Warningf("Failed to close MCP client: %v", err)
-		//}
 	}
 
 	// Clear tools and resources

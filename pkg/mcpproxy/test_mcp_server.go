@@ -20,7 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http/httptest"
+	"net/http"
 	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -29,14 +29,37 @@ import (
 
 // TestMCPServer represents a test MCP server using the official mcp-go framework
 type TestMCPServer struct {
-	mcpServer  *server.MCPServer
-	httpServer *httptest.Server
+	Addr      string
+	MCPServer *server.MCPServer
+	SSEServer *server.SSEServer
 }
 
-// NewTestMCPServer creates a new test MCP server with predefined tools and resources
-func NewTestMCPServer() *TestMCPServer {
+// NewTestSSEServer creates a new test MCP server with sse mode
+func NewTestSSEServer(addr string) *TestMCPServer {
 	s := server.NewMCPServer("Test MCP Server", "1.0.0")
+	ConfigMCPServer(s)
 
+	sseServer := server.NewSSEServer(
+		s,
+		server.WithBaseURL(fmt.Sprintf("http://%s", addr)),
+	)
+	return &TestMCPServer{
+		MCPServer: s,
+		Addr:      addr,
+		SSEServer: sseServer,
+	}
+}
+
+// NewTestStdioServer creates a new test MCP server with stdio mode
+func NewTestStdioServer() *TestMCPServer {
+	s := server.NewMCPServer("Test MCP Server", "1.0.0")
+	ConfigMCPServer(s)
+	return &TestMCPServer{
+		MCPServer: s,
+	}
+}
+
+func ConfigMCPServer(s *server.MCPServer) {
 	// Add test tools
 	s.AddTool(
 		mcp.Tool{
@@ -128,31 +151,87 @@ func NewTestMCPServer() *TestMCPServer {
 			}, nil
 		},
 	)
+}
 
-	return &TestMCPServer{
-		mcpServer: s,
+func GetTestTools() []mcp.Tool {
+	return []mcp.Tool{
+		{
+			Name:        "test_echo",
+			Description: "Echoes a message with optional prefix",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: map[string]interface{}{
+					"message": map[string]interface{}{"type": "string"},
+					"prefix":  map[string]interface{}{"type": "string"},
+				},
+				Required: []string{"message"},
+			},
+		},
+		{
+			Name:        "test_calculate",
+			Description: "Performs basic arithmetic operations",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: map[string]interface{}{
+					"a":         map[string]interface{}{"type": "number"},
+					"b":         map[string]interface{}{"type": "number"},
+					"operation": map[string]interface{}{"type": "string", "enum": []string{"add", "subtract", "multiply", "divide"}},
+				},
+				Required: []string{"a", "b", "operation"},
+			},
+		},
+		{
+			Name:        "test_delay",
+			Description: "Introduces a delay for testing timeouts",
+			InputSchema: mcp.ToolInputSchema{
+				Type: "object",
+				Properties: map[string]interface{}{
+					"milliseconds": map[string]interface{}{"type": "number", "minimum": 0},
+				},
+				Required: []string{"milliseconds"},
+			},
+		},
+	}
+}
+
+func GetTestResources() []mcp.Resource {
+	return []mcp.Resource{
+		{
+			URI:         "test://resource1",
+			Name:        "Test Resource 1",
+			Description: "First test resource",
+			MIMEType:    "text/plain",
+		},
+		{
+			URI:         "test://resource2",
+			Name:        "Test Resource 2",
+			Description: "Second test resource",
+			MIMEType:    "application/json",
+		},
 	}
 }
 
 // StartSSEServer starts the test server in SSE mode for testing
-func (ts *TestMCPServer) StartSSEServer() (string, func()) {
-	sseServer := server.NewSSEServer(ts.mcpServer,
-		server.WithBaseURL("http://localhost:8080"),
-		server.WithStaticBasePath("/mcp"),
-	)
-	endpoint, _ := sseServer.CompleteSseEndpoint()
-	sseServer.Start(endpoint)
-
-	return endpoint, func() {
-		sseServer.Shutdown(context.TODO())
+func (ts *TestMCPServer) StartSSEServer() error {
+	httpServer := &http.Server{
+		Addr:    ts.Addr,
+		Handler: ts.SSEServer,
 	}
+
+	return httpServer.ListenAndServe()
 }
 
-func (ts *TestMCPServer) StartStdioServer() {
+func (ts *TestMCPServer) CompleteSseEndpoint() string {
+	endpoint, _ := ts.SSEServer.CompleteSseEndpoint()
+	return endpoint
+}
+
+func (ts *TestMCPServer) StartStdioServer() error {
 	// Start the stdio server
-	if err := server.ServeStdio(ts.mcpServer); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if err := server.ServeStdio(ts.MCPServer); err != nil {
+		return err
 	}
+	return nil
 }
 
 // Tool handlers for testing
