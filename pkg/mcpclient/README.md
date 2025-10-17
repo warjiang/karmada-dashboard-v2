@@ -130,3 +130,8 @@ karmada-mcp-server --help
   --karmada-kubeconfig=/path/to/karmada.config \
   --karmada-context=karmada-apiserver
 ```
+
+
+```go
+
+```

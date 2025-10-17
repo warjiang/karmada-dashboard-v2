@@ -57,6 +57,23 @@ func NewMCPClient(cfg *MCPConfig) (*MCPClient, error) {
 	return mcpClient, nil
 }
 
+// NewMCPClientWithOptions will create a new MCP client with the given configuration.
+func NewMCPClientWithOptions(opts ...MCPConfigOption) (*MCPClient, error) {
+	cfg := DefaultMCPConfig()
+	for _, opt := range opts {
+		opt(cfg)
+	}
+	mcpClient := &MCPClient{
+		config: cfg,
+	}
+	if err := mcpClient.initialize(); err != nil {
+		mcpClient.Close()
+		return nil, err
+	}
+
+	return mcpClient, nil
+}
+
 // initialize sets up the MCP client based on the transport mode
 func (c *MCPClient) initialize() error {
 	var err error

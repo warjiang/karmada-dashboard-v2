@@ -21,6 +21,59 @@ import (
 	"time"
 )
 
+func TestDefaultMCPConfig(t *testing.T) {
+	config := DefaultMCPConfig()
+
+	if config.TransportMode != TransportModeStdio {
+		t.Errorf("Default transport mode = %v, want %v", config.TransportMode, TransportModeStdio)
+	}
+
+	if config.ConnectTimeout != 45*time.Second {
+		t.Errorf("Default connect timeout = %v, want %v", config.ConnectTimeout, 45*time.Second)
+	}
+
+	if config.RequestTimeout != 60*time.Second {
+		t.Errorf("Default request timeout = %v, want %v", config.RequestTimeout, 60*time.Second)
+	}
+
+	if config.MaxRetries != 3 {
+		t.Errorf("Default max retries = %v, want %v", config.MaxRetries, 3)
+	}
+}
+
+func TestNewMCPConfig(t *testing.T) {
+	opts := []MCPConfigOption{
+		WithSSEMode("http://localhost:8080/sse"),
+		WithConnectTimeout(30 * time.Second),
+		WithRequestTimeout(90 * time.Second),
+		WithMaxRetries(5),
+		WithStdioMode("/usr/bin/mcp-server"),
+	}
+
+	config := NewMCPConfig(opts...)
+
+	// Last transport mode option should win (stdio)
+	if config.TransportMode != TransportModeStdio {
+		t.Errorf("Transport mode = %v, want %v", config.TransportMode, TransportModeStdio)
+	}
+
+	if config.ServerPath != "/usr/bin/mcp-server" {
+		t.Errorf("Server path = %v, want %v", config.ServerPath, "/usr/bin/mcp-server")
+	}
+
+	if config.ConnectTimeout != 30*time.Second {
+		t.Errorf("Connect timeout = %v, want %v", config.ConnectTimeout, 30*time.Second)
+	}
+
+	if config.RequestTimeout != 90*time.Second {
+		t.Errorf("Request timeout = %v, want %v", config.RequestTimeout, 90*time.Second)
+	}
+
+	if config.MaxRetries != 5 {
+		t.Errorf("Max retries = %v, want %v", config.MaxRetries, 5)
+	}
+}
+
 func TestMCPConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -98,77 +151,6 @@ func TestMCPConfig_Validate(t *testing.T) {
 	}
 }
 
-func TestDefaultMCPConfig(t *testing.T) {
-	config := DefaultMCPConfig()
-
-	if config.TransportMode != TransportModeStdio {
-		t.Errorf("Default transport mode = %v, want %v", config.TransportMode, TransportModeStdio)
-	}
-
-	if config.KubeconfigContext != "karmada-apiserver" {
-		t.Errorf("Default kubeconfig context = %v, want %v", config.KubeconfigContext, "karmada-apiserver")
-	}
-
-	if config.ConnectTimeout != 45*time.Second {
-		t.Errorf("Default connect timeout = %v, want %v", config.ConnectTimeout, 45*time.Second)
-	}
-
-	if config.RequestTimeout != 60*time.Second {
-		t.Errorf("Default request timeout = %v, want %v", config.RequestTimeout, 60*time.Second)
-	}
-
-	if config.MaxRetries != 3 {
-		t.Errorf("Default max retries = %v, want %v", config.MaxRetries, 3)
-	}
-
-	if !config.EnableMCP {
-		t.Errorf("Default EnableMCP = %v, want %v", config.EnableMCP, true)
-	}
-}
-
-func TestNewMCPConfig(t *testing.T) {
-	opts := []MCPConfigOption{
-		WithSSEMode("http://localhost:8080/sse"),
-		WithConnectTimeout(30 * time.Second),
-		WithRequestTimeout(90 * time.Second),
-		WithMaxRetries(5),
-		WithStdioMode("/usr/bin/mcp-server"),
-		WithKubeconfigPath("/path/to/kubeconfig"),
-		WithKubeconfigContext("custom-context"),
-	}
-
-	config := NewMCPConfig(opts...)
-
-	// Last transport mode option should win (stdio)
-	if config.TransportMode != TransportModeStdio {
-		t.Errorf("Transport mode = %v, want %v", config.TransportMode, TransportModeStdio)
-	}
-
-	if config.ServerPath != "/usr/bin/mcp-server" {
-		t.Errorf("Server path = %v, want %v", config.ServerPath, "/usr/bin/mcp-server")
-	}
-
-	if config.ConnectTimeout != 30*time.Second {
-		t.Errorf("Connect timeout = %v, want %v", config.ConnectTimeout, 30*time.Second)
-	}
-
-	if config.RequestTimeout != 90*time.Second {
-		t.Errorf("Request timeout = %v, want %v", config.RequestTimeout, 90*time.Second)
-	}
-
-	if config.MaxRetries != 5 {
-		t.Errorf("Max retries = %v, want %v", config.MaxRetries, 5)
-	}
-
-	if config.KubeconfigPath != "/path/to/kubeconfig" {
-		t.Errorf("Kubeconfig path = %v, want %v", config.KubeconfigPath, "/path/to/kubeconfig")
-	}
-
-	if config.KubeconfigContext != "custom-context" {
-		t.Errorf("Kubeconfig context = %v, want %v", config.KubeconfigContext, "custom-context")
-	}
-}
-
 func TestMCPConfigOption_Individual(t *testing.T) {
 	t.Run("WithSSEMode", func(t *testing.T) {
 		config := &MCPConfig{}
@@ -223,26 +205,6 @@ func TestMCPConfigOption_Individual(t *testing.T) {
 
 		if config.MaxRetries != retries {
 			t.Errorf("Max retries = %v, want %v", config.MaxRetries, retries)
-		}
-	})
-
-	t.Run("WithKubeconfigPath", func(t *testing.T) {
-		config := &MCPConfig{}
-		path := "/custom/path/to/kubeconfig"
-		WithKubeconfigPath(path)(config)
-
-		if config.KubeconfigPath != path {
-			t.Errorf("Kubeconfig path = %v, want %v", config.KubeconfigPath, path)
-		}
-	})
-
-	t.Run("WithKubeconfigContext", func(t *testing.T) {
-		config := &MCPConfig{}
-		context := "my-custom-context"
-		WithKubeconfigContext(context)(config)
-
-		if config.KubeconfigContext != context {
-			t.Errorf("Kubeconfig context = %v, want %v", config.KubeconfigContext, context)
 		}
 	})
 }

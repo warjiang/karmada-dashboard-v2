@@ -9,28 +9,27 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// MCPConfig holds configuration for initializing the MCP client.
+// MCPConfig holds configuration values used to initialize and control
+// the behavior of an MCP client instance.
+//
+// Fields control transport selection, connection timeouts, kubernetes
+// integration points and feature flags used by the client.
 type MCPConfig struct {
 	// Transport configuration
 	TransportMode TransportMode
-	ServerPath    string
-	SSEEndpoint   string
-
-	// Kubernetes configuration
-	KubeconfigPath    string
-	KubeconfigContext string
-
-	// Connection settings
+	// for stdio mode
+	ServerPath     string
+	StdioArguments []string
+	// for sse mode
+	SSEEndpoint    string
 	ConnectTimeout time.Duration
 	RequestTimeout time.Duration
 	MaxRetries     int
-
-	// Feature flags
-	EnableMCP      bool
-	StdioArguments []string
 }
 
-// Validate checks if the configuration is valid
+// Validate verifies that required fields for the chosen transport are set
+// and performs lightweight checks for file paths. It returns an error
+// when a required value is missing.
 func (c *MCPConfig) Validate() error {
 	// Validate transport mode
 	switch c.TransportMode {
@@ -50,14 +49,12 @@ func (c *MCPConfig) Validate() error {
 		return fmt.Errorf("unsupported transport mode: %s", c.TransportMode)
 	}
 
-	// Only warn about kubeconfig, don't fail
-	if _, err := os.Stat(c.KubeconfigPath); err != nil {
-		klog.Warningf("Kubeconfig not found at %s: %v", c.KubeconfigPath, err)
-	}
-
 	return nil
 }
 
+// NewMCPConfig creates a new `MCPConfig` using the provided option
+// functions. Options are applied on top of the values returned by
+// `DefaultMCPConfig`.
 func NewMCPConfig(opts ...MCPConfigOption) *MCPConfig {
 	cfg := DefaultMCPConfig()
 	for _, opt := range opts {
@@ -66,15 +63,14 @@ func NewMCPConfig(opts ...MCPConfigOption) *MCPConfig {
 	return cfg
 }
 
-// DefaultMCPConfig returns default configuration
+// DefaultMCPConfig returns a sensible default configuration tuned for
+// local development, using stdio transport and conservative timeouts.
 func DefaultMCPConfig() *MCPConfig {
 	return &MCPConfig{
-		TransportMode:     TransportModeStdio,
-		KubeconfigContext: "karmada-apiserver",
-		ConnectTimeout:    45 * time.Second,
-		RequestTimeout:    60 * time.Second,
-		MaxRetries:        3,
-		EnableMCP:         true,
+		TransportMode:  TransportModeStdio,
+		ConnectTimeout: 45 * time.Second,
+		RequestTimeout: 60 * time.Second,
+		MaxRetries:     3,
 	}
 }
 
@@ -105,16 +101,6 @@ func WithStdioMode(serverPath string) MCPConfigOption {
 	return func(cfg *MCPConfig) {
 		cfg.TransportMode = TransportModeStdio
 		cfg.ServerPath = serverPath
-	}
-}
-func WithKubeconfigPath(kubeconfigPath string) MCPConfigOption {
-	return func(cfg *MCPConfig) {
-		cfg.KubeconfigPath = kubeconfigPath
-	}
-}
-func WithKubeconfigContext(kubeconfigContext string) MCPConfigOption {
-	return func(cfg *MCPConfig) {
-		cfg.KubeconfigContext = kubeconfigContext
 	}
 }
 

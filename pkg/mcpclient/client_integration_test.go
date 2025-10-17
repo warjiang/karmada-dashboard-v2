@@ -153,13 +153,9 @@ func TestIntegration_MCPServer_Stdio(t *testing.T) {
 	defer os.Remove(serverPath)
 
 	// Create MCP client with stdio configuration
-	config := NewMCPConfig(
+	client, err := NewMCPClientWithOptions(
 		WithStdioMode(serverPath),
-		WithConnectTimeout(10*time.Second),
-		WithRequestTimeout(10*time.Second),
 	)
-
-	client, err := NewMCPClient(config)
 	if err != nil {
 		t.Fatalf("Failed to create MCP client: %v", err)
 	}
