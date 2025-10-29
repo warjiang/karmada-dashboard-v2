@@ -456,3 +456,7 @@ func (c *MCPClient) GetResources() []mcp.Resource {
 	copy(resources, c.availableResources)
 	return resources
 }
+
+func (c *MCPClient) GetRawClient() *client.Client {
+	return c.client
+}

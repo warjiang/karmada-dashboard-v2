@@ -4,14 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/mark3labs/mcp-go/client"
+	"github.com/cloudwego/eino-ext/components/tool/mcp"
+	"github.com/cloudwego/eino/compose"
+	"github.com/karmada-io/dashboard/pkg/mcpclient"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/ark"
-	"github.com/cloudwego/eino-ext/components/tool/mcp"
-	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
 	_ "github.com/joho/godotenv/autoload"
@@ -32,13 +33,21 @@ func main() {
 	})
 	CheckError(err)
 
-	mcpClient, err := client.NewSSEMCPClient("http://localhost:1234/mcp/sse")
+	mcpClient, err := mcpclient.NewMCPClientWithOptions(
+		mcpclient.WithSSEMode("http://localhost:1234/mcp/sse"),
+		mcpclient.WithConnectTimeout(60*time.Second),
+		mcpclient.WithRequestTimeout(60*time.Second),
+	)
 	CheckError(err)
-	err = mcpClient.Start(ctx)
-	CheckError(err)
-	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{Cli: mcpClient})
+
+	//tools := mcpClient.GetTools()
+	//for _, tool := range tools {
+	//	fmt.Printf("%+v\n", tool)
+	//}
 
 	// 初始化所需的 tools
+	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{Cli: mcpClient.GetRawClient()})
+
 	tools := compose.ToolsNodeConfig{
 		Tools: mcpTools,
 	}
@@ -51,6 +60,20 @@ func main() {
 	CheckError(err)
 
 	msgs := make([]*schema.Message, 0)
+	//	msgs = append(msgs, schema.SystemMessage(`You are a helpful assistant for Karmada cluster management.
+	//You can provide guidance about Karmada concepts, best practices, and configuration help.
+	//You can help with topics like:
+	//- Cluster management and federation
+	//- Resource propagation policies
+	//- Scheduling and placement
+	//- Multi-cluster applications
+	//- Karmada installation and configuration
+	//
+	//Please provide clear and practical advice based on your knowledge of Karmada and Kubernetes.
+	//You have access to Karmada cluster management tools through function calls. When users ask about cluster resources, deployments, namespaces, or other Karmada objects, use the available tools to retrieve real-time information from the cluster.
+	//IMPORTANT: Use the function calling mechanism provided by the system. Do NOT output raw XML tags or tool syntax in your responses. Simply call the appropriate functions when needed.
+	//`))
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -62,7 +85,8 @@ func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("Enter input (type 'exit' to quit):")
-
+	//message := prepareSystemMessage(ctx, mcpClient)
+	//message = message
 	for {
 		fmt.Printf("\nUser: ")
 		if scanner.Scan() {
@@ -71,15 +95,21 @@ func main() {
 				fmt.Println("Exiting...")
 				break
 			}
-			newMsg := &schema.Message{
-				Role:    schema.User,
-				Content: input,
+			newMsgs := []*schema.Message{
+				{
+					Role:    schema.User,
+					Content: input,
+				},
 			}
-			msgs = append(msgs, newMsg)
-			streamResult, err := agent.Stream(ctx, msgs)
+			//msgs = append(msgs, newMsg)
+			//streamResult, err := agent.Stream(ctx, msgs)
+			//CheckError(err)
+			//fmt.Printf("System: ")
+			//reportStream(streamResult)
+			result, err := agent.Generate(ctx, newMsgs)
 			CheckError(err)
-			fmt.Printf("System: ")
-			reportStream(streamResult)
+			fmt.Print(result.Content)
+
 			//fmt.Printf("%s\n", generate.String())
 		} else {
 			fmt.Println("Error reading input:", scanner.Err())
