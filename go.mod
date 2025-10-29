@@ -4,7 +4,9 @@ go 1.24.6
 
 require (
 	github.com/cloudwego/eino v0.5.9
-	github.com/cloudwego/eino-ext/components/model/openai v0.1.2
+	github.com/cloudwego/eino-ext/components/model/ark v0.1.38
+	github.com/cloudwego/eino-ext/components/prompt/mcp v0.0.1
+	github.com/cloudwego/eino-ext/components/tool/mcp v0.0.5
 	github.com/distribution/reference v0.6.0
 	github.com/emicklei/go-restful-openapi/v2 v2.11.0
 	github.com/emicklei/go-restful/v3 v3.12.2
@@ -13,6 +15,7 @@ require (
 	github.com/go-openapi/spec v0.21.0
 	github.com/gobuffalo/flect v1.0.3
 	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/joho/godotenv v1.5.1
 	github.com/karmada-io/karmada v1.15.0
 	github.com/mark3labs/mcp-go v0.42.0
 	github.com/prometheus/client_golang v1.22.0
@@ -54,8 +57,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
-	github.com/cloudwego/eino-ext/components/model/ark v0.1.38 // indirect
-	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/eino-contrib/jsonschema v1.0.1 // indirect
@@ -101,7 +102,6 @@ require (
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/meguminnnnnnnnn/go-openai v0.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/moby/spdystream v0.5.0 // indirect
 	github.com/moby/term v0.5.0 // indirect

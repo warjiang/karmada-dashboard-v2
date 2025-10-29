@@ -1,17 +1,20 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"fmt"
+	"github.com/mark3labs/mcp-go/client"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/cloudwego/eino-ext/components/model/openai"
-
-	"github.com/cloudwego/eino/components/model"
-	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino-ext/components/model/ark"
+	"github.com/cloudwego/eino-ext/components/tool/mcp"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
-	"github.com/cloudwego/eino-ext/components/model/ark"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 func CheckError(err error) {
@@ -23,51 +26,65 @@ func CheckError(err error) {
 func main() {
 	ctx := context.TODO()
 	// 先初始化所需的 chatModel
-	chatModel, err := ark.NewChatModel(ctx, &ark.ChatModelConfig{
+	toolableChatModel, err := ark.NewChatModel(ctx, &ark.ChatModelConfig{
 		APIKey: os.Getenv("ARK_API_KEY"),
 		Model:  os.Getenv("ARK_MODEL_ID"),
 	})
 	CheckError(err)
 
-
-	toolableChatModel, err := openai.NewChatModel(ctx, &openai.ChatModelConfig{
-		APIKey:               "",
-		Timeout:              0,
-		HTTPClient:           nil,
-		ByAzure:              false,
-		AzureModelMapperFunc: nil,
-		BaseURL:              "",
-		APIVersion:           "",
-		Model:                "",
-		MaxTokens:            nil,
-		MaxCompletionTokens:  nil,
-		Temperature:          nil,
-		TopP:                 nil,
-		Stop:                 nil,
-		PresencePenalty:      nil,
-		ResponseFormat:       nil,
-		Seed:                 nil,
-		FrequencyPenalty:     nil,
-		LogitBias:            nil,
-		User:                 nil,
-		ExtraFields:          nil,
-		ReasoningEffort:      "",
-		Modalities:           nil,
-		Audio:                nil,
-	})
+	mcpClient, err := client.NewSSEMCPClient("http://localhost:1234/mcp/sse")
+	CheckError(err)
+	err = mcpClient.Start(ctx)
+	CheckError(err)
+	mcpTools, err := mcp.GetTools(ctx, &mcp.Config{Cli: mcpClient})
 
 	// 初始化所需的 tools
 	tools := compose.ToolsNodeConfig{
-		Tools: []tool.BaseTool{
-			mytool,
-			...
-		},
+		Tools: mcpTools,
 	}
 
 	// 创建 agent
 	agent, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: toolableChatModel,
 		ToolsConfig:      tools,
-		...
+	})
+	CheckError(err)
+
+	msgs := make([]*schema.Message, 0)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		fmt.Println("\nReceived SIGTERM or SIGINT. Exiting gracefully...")
+		os.Exit(0)
+	}()
+
+	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Println("Enter input (type 'exit' to quit):")
+
+	for {
+		fmt.Printf("\nUser: ")
+		if scanner.Scan() {
+			input := scanner.Text()
+			if input == "exit" {
+				fmt.Println("Exiting...")
+				break
+			}
+			newMsg := &schema.Message{
+				Role:    schema.User,
+				Content: input,
+			}
+			msgs = append(msgs, newMsg)
+			streamResult, err := agent.Stream(ctx, msgs)
+			CheckError(err)
+			fmt.Printf("System: ")
+			reportStream(streamResult)
+			//fmt.Printf("%s\n", generate.String())
+		} else {
+			fmt.Println("Error reading input:", scanner.Err())
+			break
+		}
 	}
+
 }
