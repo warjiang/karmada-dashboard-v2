@@ -84,7 +84,7 @@ export default function MemberClusterEvents() {
     );
   };
 
-  const getReasonTag = (reason: string, type: string) => {
+  const getReasonTag = (reason: string, _type: string) => {
     const reasonColors: Record<string, string> = {
       'Pulling': 'blue',
       'Pulled': 'green',
@@ -108,7 +108,7 @@ export default function MemberClusterEvents() {
     const [kind, name] = object.split('/');
     return (
       <div className="flex items-center gap-1">
-        <Tag color="geekblue" size="small">{kind}</Tag>
+        <Tag color="geekblue">{kind}</Tag>
         <code className="text-xs">{name}</code>
       </div>
     );
@@ -200,7 +200,7 @@ export default function MemberClusterEvents() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View event details">
+          <Button icon={<EyeOutlined />}  title="View event details">
             View
           </Button>
         </Space>

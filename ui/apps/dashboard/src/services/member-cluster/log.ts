@@ -17,7 +17,7 @@ limitations under the License.
 import {
   IResponse,
   karmadaClient,
-} from './base';
+} from '../base';
 
 export interface LogSource {
   containerName: string;

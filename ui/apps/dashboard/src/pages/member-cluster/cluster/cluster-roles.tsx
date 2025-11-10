@@ -53,7 +53,7 @@ export default function MemberClusterClusterRoles() {
       return (
         <div className="flex flex-wrap gap-1">
           {resources.map((resource, index) => (
-            <Tag key={index} color="blue" size="small">{resource}</Tag>
+            <Tag key={index} color="blue">{resource}</Tag>
           ))}
         </div>
       );
@@ -63,9 +63,9 @@ export default function MemberClusterClusterRoles() {
       <Tooltip title={resources.join(', ')}>
         <div className="flex flex-wrap gap-1">
           {resources.slice(0, 3).map((resource, index) => (
-            <Tag key={index} color="blue" size="small">{resource}</Tag>
+            <Tag key={index} color="blue">{resource}</Tag>
           ))}
-          <Tag size="small" color="cyan">+{resources.length - 3}</Tag>
+          <Tag  color="cyan">+{resources.length - 3}</Tag>
         </div>
       </Tooltip>
     );
@@ -79,9 +79,9 @@ export default function MemberClusterClusterRoles() {
     return (
       <div className="flex flex-wrap gap-1">
         {verbs.slice(0, 4).map((verb, index) => (
-          <Tag key={index} color="green" size="small">{verb}</Tag>
+          <Tag key={index} color="green">{verb}</Tag>
         ))}
-        {verbs.length > 4 && <Tag size="small" color="cyan">+{verbs.length - 4}</Tag>}
+        {verbs.length > 4 && <Tag  color="cyan">+{verbs.length - 4}</Tag>}
       </div>
     );
   };
@@ -137,13 +137,13 @@ export default function MemberClusterClusterRoles() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View ClusterRole details">
+          <Button icon={<EyeOutlined />}  title="View ClusterRole details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit ClusterRole">
+          <Button icon={<EditOutlined />}  title="Edit ClusterRole">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete ClusterRole">
+          <Button icon={<DeleteOutlined />}  danger title="Delete ClusterRole">
             Delete
           </Button>
         </Space>

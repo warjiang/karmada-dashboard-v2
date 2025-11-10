@@ -62,7 +62,7 @@ export default function MemberClusterRoles() {
       return (
         <div className="flex flex-wrap gap-1">
           {resources.map((resource, index) => (
-            <Tag key={index} color="blue" size="small">{resource}</Tag>
+            <Tag key={index} color="blue">{resource}</Tag>
           ))}
         </div>
       );
@@ -72,9 +72,9 @@ export default function MemberClusterRoles() {
       <Tooltip title={resources.join(', ')}>
         <div className="flex flex-wrap gap-1">
           {resources.slice(0, 3).map((resource, index) => (
-            <Tag key={index} color="blue" size="small">{resource}</Tag>
+            <Tag key={index} color="blue">{resource}</Tag>
           ))}
-          <Tag size="small" color="cyan">+{resources.length - 3}</Tag>
+          <Tag  color="cyan">+{resources.length - 3}</Tag>
         </div>
       </Tooltip>
     );
@@ -88,9 +88,9 @@ export default function MemberClusterRoles() {
     return (
       <div className="flex flex-wrap gap-1">
         {verbs.slice(0, 4).map((verb, index) => (
-          <Tag key={index} color="green" size="small">{verb}</Tag>
+          <Tag key={index} color="green">{verb}</Tag>
         ))}
-        {verbs.length > 4 && <Tag size="small" color="cyan">+{verbs.length - 4}</Tag>}
+        {verbs.length > 4 && <Tag  color="cyan">+{verbs.length - 4}</Tag>}
       </div>
     );
   };
@@ -109,7 +109,7 @@ export default function MemberClusterRoles() {
         <div className="flex items-center gap-1">
           <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
           {remainingCount > 0 && (
-            <Tag size="small" color="purple">+{remainingCount}</Tag>
+            <Tag  color="purple">+{remainingCount}</Tag>
           )}
         </div>
       </Tooltip>
@@ -166,13 +166,13 @@ export default function MemberClusterRoles() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View Role details">
+          <Button icon={<EyeOutlined />}  title="View Role details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit Role">
+          <Button icon={<EditOutlined />}  title="Edit Role">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete Role">
+          <Button icon={<DeleteOutlined />}  danger title="Delete Role">
             Delete
           </Button>
         </Space>

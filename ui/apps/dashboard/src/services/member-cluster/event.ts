@@ -21,7 +21,7 @@ import {
   karmadaClient,
   ObjectMeta,
   TypeMeta,
-} from './base';
+} from '../base';
 
 export interface Event {
   objectMeta: ObjectMeta;

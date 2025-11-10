@@ -110,7 +110,7 @@ export default function MemberClusterSecrets() {
           <KeyOutlined className="text-blue-500" />
           <code className="text-xs">{keys[0]}</code>
           {keys.length > 1 && (
-            <Tag size="small" color="blue">+{keys.length - 1}</Tag>
+            <Tag  color="blue">+{keys.length - 1}</Tag>
           )}
         </div>
       </Tooltip>
@@ -138,7 +138,7 @@ export default function MemberClusterSecrets() {
         <div className="flex items-center gap-1">
           <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
           {remainingCount > 0 && (
-            <Tag size="small" color="purple">+{remainingCount}</Tag>
+            <Tag  color="purple">+{remainingCount}</Tag>
           )}
         </div>
       </Tooltip>
@@ -152,7 +152,7 @@ export default function MemberClusterSecrets() {
   const getLastUpdatedTag = (lastUpdated: string) => {
     const isRecent = lastUpdated.includes('h') || lastUpdated === '1d';
     return (
-      <Tag color={isRecent ? 'green' : 'default'} size="small">
+      <Tag color={isRecent ? 'green' : 'default'}>
         {lastUpdated} ago
       </Tag>
     );
@@ -216,13 +216,13 @@ export default function MemberClusterSecrets() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View Secret details">
+          <Button icon={<EyeOutlined />}  title="View Secret details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit Secret">
+          <Button icon={<EditOutlined />}  title="Edit Secret">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete Secret">
+          <Button icon={<DeleteOutlined />}  danger title="Delete Secret">
             Delete
           </Button>
         </Space>

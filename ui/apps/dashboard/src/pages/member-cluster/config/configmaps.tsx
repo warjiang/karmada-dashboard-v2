@@ -79,7 +79,7 @@ export default function MemberClusterConfigMaps() {
           <FileTextOutlined className="text-blue-500" />
           <code className="text-xs">{keys[0]}</code>
           {keys.length > 1 && (
-            <Tag size="small" color="blue">+{keys.length - 1}</Tag>
+            <Tag  color="blue">+{keys.length - 1}</Tag>
           )}
         </div>
       </Tooltip>
@@ -107,7 +107,7 @@ export default function MemberClusterConfigMaps() {
         <div className="flex items-center gap-1">
           <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
           {remainingCount > 0 && (
-            <Tag size="small" color="purple">+{remainingCount}</Tag>
+            <Tag  color="purple">+{remainingCount}</Tag>
           )}
         </div>
       </Tooltip>
@@ -164,13 +164,13 @@ export default function MemberClusterConfigMaps() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View ConfigMap data">
+          <Button icon={<EyeOutlined />}  title="View ConfigMap data">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit ConfigMap">
+          <Button icon={<EditOutlined />}  title="Edit ConfigMap">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete ConfigMap">
+          <Button icon={<DeleteOutlined />}  danger title="Delete ConfigMap">
             Delete
           </Button>
         </Space>

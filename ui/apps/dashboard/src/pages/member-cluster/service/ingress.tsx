@@ -78,7 +78,7 @@ export default function MemberClusterIngress() {
         <div className="flex items-center gap-1">
           <code className="text-xs">{displayHost}</code>
           {remainingCount > 0 && (
-            <Tag size="small" color="blue">+{remainingCount}</Tag>
+            <Tag  color="blue">+{remainingCount}</Tag>
           )}
         </div>
       </Tooltip>
@@ -161,13 +161,13 @@ export default function MemberClusterIngress() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit Ingress">
+          <Button icon={<EditOutlined />}  title="Edit Ingress">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete Ingress">
+          <Button icon={<DeleteOutlined />}  danger title="Delete Ingress">
             Delete
           </Button>
         </Space>

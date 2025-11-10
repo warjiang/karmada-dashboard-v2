@@ -127,7 +127,7 @@ export default function MemberClusterPersistentVolumeClaims() {
     return (
       <div className="flex gap-1">
         {modes.map((mode, index) => (
-          <Tag key={index} size="small" color="geekblue">
+          <Tag key={index}  color="geekblue">
             {modeAbbrev[mode] || mode}
           </Tag>
         ))}
@@ -147,7 +147,7 @@ export default function MemberClusterPersistentVolumeClaims() {
     return (
       <div className="flex items-center gap-1">
         <code className="text-xs">{pods[0]}</code>
-        <Tag size="small" color="cyan">+{pods.length - 1}</Tag>
+        <Tag  color="cyan">+{pods.length - 1}</Tag>
       </div>
     );
   };
@@ -167,7 +167,7 @@ export default function MemberClusterPersistentVolumeClaims() {
       <div className="flex items-center gap-2">
         <Progress
           percent={usagePercent}
-          size="small"
+         
           status={getStatus()}
           showInfo={false}
           style={{ width: 60 }}
@@ -246,15 +246,15 @@ export default function MemberClusterPersistentVolumeClaims() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View PVC details">
+          <Button icon={<EyeOutlined />}  title="View PVC details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit PVC">
+          <Button icon={<EditOutlined />}  title="Edit PVC">
             Edit
           </Button>
           <Button 
             icon={<DeleteOutlined />} 
-            size="small" 
+             
             danger 
             title="Delete PVC"
             disabled={record.mountedPods.length > 0}
