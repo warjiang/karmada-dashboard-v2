@@ -55,7 +55,7 @@ import {
   ChevronDown,
   SquareTerminal,
   MessageSquare,
-
+  PanelsTopLeft,
 } from 'lucide-react';
 
 export type Icon = LucideIcon;
@@ -157,6 +157,7 @@ export const Icons = {
   pdf: FileText,
   upload: PlusCircle,
   uploadFile: Upload,
+  panelsTopLeft: PanelsTopLeft,
   zh: ({ ...props }: LucideProps) => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
