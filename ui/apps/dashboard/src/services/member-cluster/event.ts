@@ -17,11 +17,10 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
-} from './base';
+} from '../base';
 
 export interface Event {
   objectMeta: ObjectMeta;
@@ -54,16 +53,44 @@ export async function GetEvents(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: Event[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: Event[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
+}
+
+export async function GetMemberClusterEvents(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/event/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/event`;
+
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: Event[];
+  }>(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp;
 }

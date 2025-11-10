@@ -1,236 +1,353 @@
-import { Table, Tag, Button, Space, Progress } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined, FolderOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import {
+  App,
+  Button,
+  Drawer,
+  Input,
+  Space,
+  Table,
+  TableColumnProps,
+  Tag,
+  Tooltip,
+} from 'antd';
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FolderOutlined,
+  ExclamationCircleOutlined,
+} from '@ant-design/icons';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemberClusterContext } from '@/hooks';
+import {
+  Namespace,
+  GetMemberClusterNamespaces,
+  GetMemberClusterNamespaceDetail,
+} from '@/services/member-cluster/namespace';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterNamespaces() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
 
-  const mockNamespaces = [
-    {
-      name: 'default',
-      status: 'Active',
-      age: '45d',
-      labels: '',
-      resourceQuota: true,
-      pods: { current: 12, limit: 50 },
-      services: { current: 8, limit: 20 },
-      secrets: { current: 5, limit: 10 },
-      configMaps: { current: 3, limit: 15 }
-    },
-    {
-      name: 'kube-system',
-      status: 'Active',
-      age: '45d',
-      labels: 'kubernetes.io/metadata.name=kube-system',
-      resourceQuota: false,
-      pods: { current: 25, limit: null },
-      services: { current: 10, limit: null },
-      secrets: { current: 12, limit: null },
-      configMaps: { current: 8, limit: null }
-    },
-    {
-      name: 'production',
-      status: 'Active',
-      age: '30d',
-      labels: 'environment=production,tier=backend',
-      resourceQuota: true,
-      pods: { current: 45, limit: 100 },
-      services: { current: 15, limit: 30 },
-      secrets: { current: 8, limit: 20 },
-      configMaps: { current: 12, limit: 25 }
-    },
-    {
-      name: 'monitoring',
-      status: 'Active',
-      age: '20d',
-      labels: 'app=monitoring,component=observability',
-      resourceQuota: true,
-      pods: { current: 8, limit: 20 },
-      services: { current: 5, limit: 10 },
-      secrets: { current: 3, limit: 8 },
-      configMaps: { current: 4, limit: 10 }
-    },
-    {
-      name: 'staging',
-      status: 'Terminating',
-      age: '15d',
-      labels: 'environment=staging',
-      resourceQuota: true,
-      pods: { current: 2, limit: 20 },
-      services: { current: 1, limit: 10 },
-      secrets: { current: 1, limit: 5 },
-      configMaps: { current: 0, limit: 5 }
-    }
-  ];
+  const [filter, setFilter] = useState<{ searchText: string }>({
+    searchText: '',
+  });
 
-  const getStatusTag = (status: string) => {
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<Namespace | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['GetMemberClusterNamespaces', memberClusterName, filter],
+    queryFn: async () => {
+      const ret = await GetMemberClusterNamespaces({
+        memberClusterName,
+        keyword: filter.searchText,
+      });
+      return ret.data;
+    },
+  });
+
+  const getStatusTag = (phase: string) => {
     const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
-      'Active': { color: 'success', icon: <FolderOutlined /> },
-      'Terminating': { color: 'error', icon: <ExclamationCircleOutlined /> }
+      Active: { color: 'success', icon: <FolderOutlined /> },
+      Terminating: { color: 'error', icon: <ExclamationCircleOutlined /> },
     };
 
-    const config = statusConfig[status] || { color: 'default', icon: <FolderOutlined /> };
-    
+    const config =
+      statusConfig[phase] || { color: 'default', icon: <FolderOutlined /> };
+
     return (
       <Tag color={config.color} icon={config.icon}>
-        {status}
+        {phase}
       </Tag>
     );
   };
 
-  const getResourceQuotaTag = (hasQuota: boolean) => {
-    return hasQuota ? 
-      <Tag color="blue">Enabled</Tag> : 
-      <Tag color="default">Disabled</Tag>;
-  };
+  const getSkipAutoPropagationTag = (skip: boolean) => (
+    <Tag color={skip ? 'default' : 'blue'}>
+      {skip ? 'Skipped' : 'Propagated'}
+    </Tag>
+  );
 
-  const getResourceUsage = (current: number, limit: number | null, resourceType: string) => {
-    if (limit === null) {
-      return <span className="text-sm">{current}</span>;
-    }
-
-    const percent = Math.round((current / limit) * 100);
-    const status = percent >= 90 ? 'exception' : percent >= 70 ? 'active' : 'success';
-
-    return (
-      <div className="flex items-center gap-2">
-        <Progress
-          percent={percent}
-          size="small"
-          status={status}
-          showInfo={false}
-          style={{ width: 60 }}
-        />
-        <span className="text-xs">{current}/{limit}</span>
-      </div>
-    );
-  };
-
-  const formatLabels = (labels: string) => {
-    if (!labels) {
+  const formatLabels = (ns: Namespace) => {
+    const labels = ns.objectMeta.labels || {};
+    const entries = Object.entries(labels);
+    if (!entries.length) {
       return <span className="text-gray-400">None</span>;
     }
+    const first = `${entries[0][0]}=${entries[0][1]}`;
+    const remaining = entries.length - 1;
 
-    const labelPairs = labels.split(',');
-    const firstLabel = labelPairs[0];
-    
-    if (labelPairs.length === 1) {
-      return <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>;
+    if (entries.length === 1) {
+      return (
+        <Tag color="geekblue" className="text-xs">
+          {first}
+        </Tag>
+      );
     }
-    
+
+    const full = entries.map(([k, v]) => `${k}=${v}`).join(', ');
     return (
-      <div className="flex items-center gap-1">
-        <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
-        <Tag size="small" color="purple">+{labelPairs.length - 1}</Tag>
-      </div>
+      <Tooltip title={full}>
+        <div className="flex items-center gap-1">
+          <Tag color="geekblue" className="text-xs">
+            {first}
+          </Tag>
+          <Tag color="purple">+{remaining}</Tag>
+        </div>
+      </Tooltip>
     );
   };
 
-  const columns = [
+  const columns: TableColumnProps<Namespace>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_: string, record: Namespace) => (
+        <strong>{record.objectMeta.name}</strong>
+      ),
     },
     {
       title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => getStatusTag(status)
+      dataIndex: 'phase',
+      key: 'phase',
+      render: (_: string, record: Namespace) => getStatusTag(record.phase),
     },
     {
-      title: 'Resource Quota',
-      dataIndex: 'resourceQuota',
-      key: 'resourceQuota',
-      render: (hasQuota: boolean) => getResourceQuotaTag(hasQuota)
-    },
-    {
-      title: 'Pods',
-      key: 'pods',
-      render: (record: any) => getResourceUsage(record.pods.current, record.pods.limit, 'pods')
-    },
-    {
-      title: 'Services',
-      key: 'services',
-      render: (record: any) => getResourceUsage(record.services.current, record.services.limit, 'services')
-    },
-    {
-      title: 'Secrets',
-      key: 'secrets',
-      render: (record: any) => getResourceUsage(record.secrets.current, record.secrets.limit, 'secrets')
-    },
-    {
-      title: 'ConfigMaps',
-      key: 'configMaps',
-      render: (record: any) => getResourceUsage(record.configMaps.current, record.configMaps.limit, 'configMaps')
+      title: 'Skip Auto Propagation',
+      dataIndex: 'skipAutoPropagation',
+      key: 'skipAutoPropagation',
+      render: (_: boolean, record: Namespace) =>
+        getSkipAutoPropagationTag(record.skipAutoPropagation),
     },
     {
       title: 'Labels',
       dataIndex: 'labels',
       key: 'labels',
-      render: (labels: string) => formatLabels(labels)
+      render: (_: unknown, record: Namespace) => formatLabels(record),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
+      key: 'age',
+      render: (_: string, record: Namespace) => {
+        const create = dayjs(record.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: Namespace) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View namespace details">
+          <Button
+            icon={<EyeOutlined />}
+            title="View namespace details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detail = await GetMemberClusterNamespaceDetail({
+                  memberClusterName,
+                  name: record.objectMeta.name,
+                });
+                setViewDetail(detail.data as Namespace);
+                setViewDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load namespace');
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit namespace">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit namespace (YAML)"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  memberClusterName,
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: '',
+                });
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load namespace');
+                  return;
+                }
+                setEditContent(stringify(ret.data));
+                setEditDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load namespace');
+              }
+            }}
+          >
             Edit
           </Button>
-          <Button 
-            icon={<DeleteOutlined />} 
-            size="small" 
-            danger 
+          <Button
+            icon={<DeleteOutlined />}
+            danger
             title="Delete namespace"
-            disabled={record.name === 'default' || record.name === 'kube-system'}
+            disabled
           >
             Delete
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        Namespaces in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes Namespaces in the "{memberClusterName}" cluster. Namespaces provide resource isolation and organization.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className="flex flex-row space-x-4 mb-4">
+        <Input.Search
+          placeholder="Search by name"
+          className="w-[300px]"
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockNamespaces}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} namespaces`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          columns={columns}
+          dataSource={data?.namespaces || []}
+          rowKey={(record) => record.objectMeta.name}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} namespaces`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="Namespace details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
         }}
-        scroll={{ x: 1000 }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> System namespaces (default, kube-system) cannot be deleted. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific Namespaces.
-          <br />
-          <strong>Resource Quotas:</strong> When enabled, limit resource consumption within the namespace
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>Status: {getStatusTag(viewDetail.phase)}</div>
+              <div>
+                Skip Auto Propagation:{' '}
+                {getSkipAutoPropagationTag(viewDetail.skipAutoPropagation)}
+              </div>
+              <div>Labels: {formatLabels(viewDetail)}</div>
+            </div>
+          </div>
+        )}
+      </Drawer
+      >
+
+      <Drawer
+        title="Edit Namespace (YAML)"
+        placement="right"
+        width={900}
+        open={editDrawerOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditDrawerOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                  };
+                  const name = metadata.name || '';
+
+                  const ret = await PutResource({
+                    memberClusterName,
+                    kind,
+                    name,
+                    namespace: '',
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(
+                      ret.message || 'Failed to update namespace',
+                    );
+                    return;
+                  }
+
+                  setEditDrawerOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update namespace');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }

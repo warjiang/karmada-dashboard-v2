@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { ClusterContext } from "@/hooks/useCluster.ts";
+import { ClusterContext } from "@/hooks";
 import { useState } from "react";
 import "./App.css";
 import Router from "./routes";
@@ -24,7 +24,19 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuthProvider from "@/components/auth";
 import { getAntdLocale } from "@/utils/i18n.tsx";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Avoid repeated refetches on window focus/reconnect which can
+      // cause duplicate error notifications and unnecessary traffic.
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      // Limit automatic retries; many API errors here are permission-related
+      // (e.g. 403) and won't succeed by retrying.
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   const [cluster, setCluster] = useState<string>("");
@@ -41,7 +53,10 @@ function App() {
     >
       <AntdApp>
         <QueryClientProvider client={queryClient}>
-          <ClusterContext.Provider value={{ cluster, setCluster }}>
+          <ClusterContext.Provider value={{ 
+            currentCluster: cluster,
+            setCurrentCluster: setCluster,
+           }}>
             <AuthProvider>
               <HelmetProvider>
                 <Helmet>

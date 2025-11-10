@@ -1,24 +1,7 @@
-/*
-Copyright 2024 The Karmada Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -67,16 +50,8 @@ export interface ClusterRoleBinding {
   subjects: Subject[];
   roleRef: RoleRef;
 }
-
-export interface ServiceAccount {
-  objectMeta: ObjectMeta;
-  typeMeta: TypeMeta;
-  secrets: any[];
-  imagePullSecrets: any[];
-}
-
-// Role APIs
-export async function GetRoles(params?: {
+export async function GetMemberClusterRoles(params: {
+  memberClusterName: string;
   namespace?: string;
   keyword?: string;
   filterBy?: string[];
@@ -84,43 +59,39 @@ export async function GetRoles(params?: {
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { namespace, keyword, ...queryParams } = params || {};
-  const url = namespace ? `/role/${namespace}` : `/role`;
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/role/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/role`;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      roles: Role[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    items: Role[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
-export async function GetRoleDetail(params: {
+export async function GetMemberClusterRoleDetail(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & Role
-    >
-  >(`/role/${namespace}/${name}`);
+  const { memberClusterName, namespace, name } = params;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & Role>(`/clusterapi/${memberClusterName}/api/v1/role/${namespace}/${name}`);
   return resp.data;
 }
-
-// RoleBinding APIs
-export async function GetRoleBindings(params?: {
+export async function GetMemberClusterRoleBindings(params: {
+  memberClusterName: string;
   namespace?: string;
   keyword?: string;
   filterBy?: string[];
@@ -128,183 +99,104 @@ export async function GetRoleBindings(params?: {
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { namespace, keyword, ...queryParams } = params || {};
-  const url = namespace ? `/rolebinding/${namespace}` : `/rolebinding`;
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/rolebinding/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/rolebinding`;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      roleBindings: RoleBinding[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    items: RoleBinding[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
-export async function GetRoleBindingDetail(params: {
+export async function GetMemberClusterRoleBindingDetail(params: {
+  memberClusterName: string;
   namespace: string;
   name: string;
 }) {
-  const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & RoleBinding
-    >
-  >(`/rolebinding/${namespace}/${name}`);
+  const { memberClusterName, namespace, name } = params;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & RoleBinding>(`/clusterapi/${memberClusterName}/api/v1/rolebinding/${namespace}/${name}`);
   return resp.data;
 }
-
-// ClusterRole APIs
-export async function GetClusterRoles(params?: {
+export async function GetMemberClusterClusterRoles(params: {
+  memberClusterName: string;
   keyword?: string;
   filterBy?: string[];
   sortBy?: string[];
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { keyword, ...queryParams } = params || {};
+  const { memberClusterName, keyword, ...queryParams } = params;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      clusterRoles: ClusterRole[];
-    }>
-  >('/clusterrole', {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    items: ClusterRole[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/clusterrole`, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
-export async function GetClusterRoleDetail(name: string) {
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & ClusterRole
-    >
-  >(`/clusterrole/${name}`);
+export async function GetMemberClusterClusterRoleDetail(params: {
+  memberClusterName: string;
+  name: string;
+}) {
+  const { memberClusterName, name } = params;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & ClusterRole>(`/clusterapi/${memberClusterName}/api/v1/clusterrole/${name}`);
   return resp.data;
 }
-
-// ClusterRoleBinding APIs
-export async function GetClusterRoleBindings(params?: {
+export async function GetMemberClusterClusterRoleBindings(params: {
+  memberClusterName: string;
   keyword?: string;
   filterBy?: string[];
   sortBy?: string[];
   itemsPerPage?: number;
   page?: number;
 }) {
-  const { keyword, ...queryParams } = params || {};
+  const { memberClusterName, keyword, ...queryParams } = params;
   const requestData = { ...queryParams } as DataSelectQuery;
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      clusterRoleBindings: ClusterRoleBinding[];
-    }>
-  >('/clusterrolebinding', {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    items: ClusterRoleBinding[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/clusterrolebinding`, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
-export async function GetClusterRoleBindingDetail(name: string) {
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & ClusterRoleBinding
-    >
-  >(`/clusterrolebinding/${name}`);
-  return resp.data;
-}
-
-// ServiceAccount APIs
-export async function GetServiceAccounts(params?: {
-  namespace?: string;
-  keyword?: string;
-  filterBy?: string[];
-  sortBy?: string[];
-  itemsPerPage?: number;
-  page?: number;
-}) {
-  const { namespace, keyword, ...queryParams } = params || {};
-  const url = namespace ? `/serviceaccount/${namespace}` : `/serviceaccount`;
-  const requestData = { ...queryParams } as DataSelectQuery;
-  if (keyword) {
-    requestData.filterBy = ['name', keyword];
-  }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      serviceAccounts: ServiceAccount[];
-    }>
-  >(url, {
-    params: convertDataSelectQuery(requestData),
-  });
-  return resp.data;
-}
-
-export async function GetServiceAccountDetail(params: {
-  namespace: string;
+export async function GetMemberClusterClusterRoleBindingDetail(params: {
+  memberClusterName: string;
   name: string;
 }) {
-  const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & ServiceAccount
-    >
-  >(`/serviceaccount/${namespace}/${name}`);
-  return resp.data;
-}
-
-export async function GetServiceAccountSecrets(params: {
-  namespace: string;
-  name: string;
-}) {
-  const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      secrets: any[];
-    }>
-  >(`/serviceaccount/${namespace}/${name}/secret`);
-  return resp.data;
-}
-
-export async function GetServiceAccountImagePullSecrets(params: {
-  namespace: string;
-  name: string;
-}) {
-  const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      secrets: any[];
-    }>
-  >(`/serviceaccount/${namespace}/${name}/imagepullsecret`);
+  const { memberClusterName, name } = params;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & ClusterRoleBinding>(`/clusterapi/${memberClusterName}/api/v1/clusterrolebinding/${name}`);
   return resp.data;
 }

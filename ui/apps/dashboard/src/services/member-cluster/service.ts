@@ -17,12 +17,12 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   Selector,
   TypeMeta,
 } from '../base';
+import { Event } from './event'
 
 export enum Protocol {
   TCP = 'TCP',
@@ -71,18 +71,16 @@ export async function GetMemberClusterServices(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      services: Service[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    services: Service[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export interface Ingress {
@@ -103,18 +101,16 @@ export async function GetMemberClusterIngress(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      items: Ingress[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    items: Ingress[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterServiceDetail(params: {
@@ -123,14 +119,10 @@ export async function GetMemberClusterServiceDetail(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & Service
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/service/${namespace}/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & Service>(`/clusterapi/${memberClusterName}/api/v1/service/${namespace}/${name}`);
+  return resp;
 }
 
 export async function GetMemberClusterServiceEvents(params: {
@@ -139,18 +131,16 @@ export async function GetMemberClusterServiceEvents(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: Event[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/service/${namespace}/${name}/event`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterServiceIngresses(params: {
@@ -159,18 +149,16 @@ export async function GetMemberClusterServiceIngresses(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      ingresses: Ingress[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    ingresses: Ingress[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/service/${namespace}/${name}/ingress`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterServicePods(params: {
@@ -179,16 +167,14 @@ export async function GetMemberClusterServicePods(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/service/${namespace}/${name}/pod`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/service/${namespace}/${name}/pod`);
+  return resp;
 }
 
 export async function GetMemberClusterIngressDetail(params: {
@@ -197,14 +183,10 @@ export async function GetMemberClusterIngressDetail(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & Ingress
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/ingress/${namespace}/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & Ingress>(`/clusterapi/${memberClusterName}/api/v1/ingress/${namespace}/${name}`);
+  return resp;
 }
 
 export async function GetMemberClusterIngressEvents(params: {
@@ -213,16 +195,14 @@ export async function GetMemberClusterIngressEvents(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: Event[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/ingress/${namespace}/${name}/event`,
   );
-  return resp.data;
+  return resp;
 }

@@ -17,8 +17,7 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -97,18 +96,16 @@ export async function GetNetworkPolicies(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      networkPolicies: NetworkPolicy[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    networkPolicies: NetworkPolicy[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetNetworkPolicyDetail(params: {
@@ -116,14 +113,10 @@ export async function GetNetworkPolicyDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & NetworkPolicy
-    >
-  >(`/networkpolicy/${namespace}/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & NetworkPolicy>(`/networkpolicy/${namespace}/${name}`);
+  return resp;
 }
 
 // IngressClass APIs
@@ -139,27 +132,21 @@ export async function GetIngressClasses(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      ingressClasses: IngressClass[];
-    }>
-  >('/ingressclass', {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    ingressClasses: IngressClass[];
+  }>('/ingressclass', {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetIngressClassDetail(name: string) {
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & IngressClass
-    >
-  >(`/ingressclass/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & IngressClass>(`/ingressclass/${name}`);
+  return resp;
 }

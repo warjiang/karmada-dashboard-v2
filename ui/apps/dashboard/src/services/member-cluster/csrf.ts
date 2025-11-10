@@ -14,18 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import {
-  IResponse,
-  karmadaClient,
-} from '../base';
+import {karmadaMemberClusterClient} from '../base';
 
 export interface CSRFToken {
   token: string;
 }
 
 export async function GetCSRFToken(action: string) {
-  const resp = await karmadaClient.get<IResponse<CSRFToken>>(
+  const resp = await karmadaMemberClusterClient.get<CSRFToken>(
     `/csrftoken/${action}`
   );
-  return resp.data;
+  return resp;
 }

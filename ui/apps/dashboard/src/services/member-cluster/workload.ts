@@ -17,8 +17,7 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   RollingUpdateStrategy,
   Selector,
   WorkloadKind,
@@ -74,23 +73,21 @@ export async function GetMemberClusterWorkloads(params: {
   const url = namespace
     ? `/clusterapi/${memberClusterName}/api/v1/${kind}/${namespace}`
     : `/clusterapi/${memberClusterName}/api/v1/${kind}`;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      status: WorkloadStatus;
-      deployments?: Workload[];
-      statefulSets?: Workload[];
-      daemonSets?: Workload[];
-      jobs?: Workload[];
-      items?: Workload[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    status: WorkloadStatus;
+    deployments?: Workload[];
+    statefulSets?: Workload[];
+    daemonSets?: Workload[];
+    jobs?: Workload[];
+    items?: Workload[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 // Specific workload list functions
@@ -111,19 +108,17 @@ export async function GetMemberClusterDeployments(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      status?: WorkloadStatus;
-      deployments: Workload[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    status?: WorkloadStatus;
+    deployments: Workload[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterDaemonSets(params: {
@@ -143,19 +138,17 @@ export async function GetMemberClusterDaemonSets(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      status?: WorkloadStatus;
-      daemonSets: Workload[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    status?: WorkloadStatus;
+    daemonSets: Workload[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterStatefulSets(params: {
@@ -175,19 +168,17 @@ export async function GetMemberClusterStatefulSets(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      status?: WorkloadStatus;
-      statefulSets: Workload[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    status?: WorkloadStatus;
+    statefulSets: Workload[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterJobs(params: {
@@ -207,19 +198,17 @@ export async function GetMemberClusterJobs(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      status?: WorkloadStatus;
-      jobs: Workload[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    status?: WorkloadStatus;
+    jobs: Workload[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterCronJobs(params: {
@@ -239,19 +228,17 @@ export async function GetMemberClusterCronJobs(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      status?: WorkloadStatus;
-      cronJobs: Workload[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    status?: WorkloadStatus;
+    cronJobs: Workload[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export interface WorkloadDetail {
@@ -284,14 +271,10 @@ export async function GetMemberClusterWorkloadDetail(params: {
 }) {
   const { memberClusterName, kind, name, namespace } = params;
   const url = `/clusterapi/${memberClusterName}/api/v1/${kind}/${namespace}/${name}`;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & WorkloadDetail
-    >
-  >(url);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & WorkloadDetail>(url);
+  return resp;
 }
 
 export interface WorkloadEvent {
@@ -319,16 +302,14 @@ export async function GetMemberClusterWorkloadEvents(params: {
 }) {
   const { memberClusterName, kind, name, namespace } = params;
   const url = `/clusterapi/${memberClusterName}/api/v1/${kind}/${namespace}/${name}/event`;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: WorkloadEvent[];
-    }>
-  >(url);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: WorkloadEvent[];
+  }>(url);
+  return resp;
 }
 
 export async function CreateMemberClusterDeployment(params: {
@@ -338,16 +319,14 @@ export async function CreateMemberClusterDeployment(params: {
   content: string;
 }) {
   const { memberClusterName, ...deploymentParams } = params;
-  const resp = await karmadaClient.post<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: WorkloadEvent[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/deployment`, deploymentParams);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: WorkloadEvent[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/deployment`, deploymentParams);
+  return resp;
 }
 
 // Additional Deployment operations
@@ -357,18 +336,16 @@ export async function GetMemberClusterDeploymentNewReplicaSets(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      replicaSets: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    replicaSets: any[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}/${name}/newreplicaset`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterDeploymentOldReplicaSets(params: {
@@ -377,18 +354,16 @@ export async function GetMemberClusterDeploymentOldReplicaSets(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      replicaSets: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    replicaSets: any[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}/${name}/oldreplicaset`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function PauseMemberClusterDeployment(params: {
@@ -397,10 +372,10 @@ export async function PauseMemberClusterDeployment(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<any>(
     `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}/${name}/pause`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function ResumeMemberClusterDeployment(params: {
@@ -409,10 +384,10 @@ export async function ResumeMemberClusterDeployment(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<any>(
     `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}/${name}/resume`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function RestartMemberClusterDeployment(params: {
@@ -421,10 +396,10 @@ export async function RestartMemberClusterDeployment(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<any>(
     `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}/${name}/restart`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function RollbackMemberClusterDeployment(params: {
@@ -434,11 +409,11 @@ export async function RollbackMemberClusterDeployment(params: {
   targetRevision?: number;
 }) {
   const { memberClusterName, namespace, name, targetRevision } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<any>(
     `/clusterapi/${memberClusterName}/api/v1/deployment/${namespace}/${name}/rollback`,
     { targetRevision },
   );
-  return resp.data;
+  return resp;
 }
 
 // DaemonSet operations
@@ -448,18 +423,16 @@ export async function GetMemberClusterDaemonSetPods(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/daemonset/${namespace}/${name}/pod`,
   );
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterDaemonSetServices(params: {
@@ -468,18 +441,16 @@ export async function GetMemberClusterDaemonSetServices(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      services: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    services: any[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/daemonset/${namespace}/${name}/service`,
   );
-  return resp.data;
+  return resp;
 }
 
 // StatefulSet operations
@@ -489,18 +460,16 @@ export async function GetMemberClusterStatefulSetPods(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(
     `/clusterapi/${memberClusterName}/api/v1/statefulset/${namespace}/${name}/pod`,
   );
-  return resp.data;
+  return resp;
 }
 
 // Job operations
@@ -510,16 +479,14 @@ export async function GetMemberClusterJobPods(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/job/${namespace}/${name}/pod`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/job/${namespace}/${name}/pod`);
+  return resp;
 }
 
 // CronJob operations
@@ -529,16 +496,14 @@ export async function GetMemberClusterCronJobJobs(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      jobs: any[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/cronjob/${namespace}/${name}/job`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    jobs: any[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/cronjob/${namespace}/${name}/job`);
+  return resp;
 }
 
 export async function TriggerMemberClusterCronJob(params: {
@@ -547,8 +512,8 @@ export async function TriggerMemberClusterCronJob(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<any>(
     `/clusterapi/${memberClusterName}/api/v1/cronjob/${namespace}/${name}/trigger`,
   );
-  return resp.data;
+  return resp;
 }

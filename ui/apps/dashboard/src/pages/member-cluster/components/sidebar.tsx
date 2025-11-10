@@ -1,27 +1,28 @@
-import { FC } from 'react';
-import { Menu } from 'antd';
-import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import {FC, Key, ReactNode} from 'react';
+import type {MenuProps} from 'antd';
+import {Menu} from 'antd';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import {
   ApiOutlined,
-  DatabaseOutlined,
+  AuditOutlined,
+  CloudServerOutlined,
   ClusterOutlined,
-  ScheduleOutlined,
-  DeploymentUnitOutlined,
   ContainerOutlined,
   ControlOutlined,
-  GlobalOutlined,
-  CloudServerOutlined,
+  DatabaseOutlined,
+  DeploymentUnitOutlined,
+  FileTextOutlined,
   FolderOutlined,
+  GlobalOutlined,
   LockOutlined,
+  NodeIndexOutlined,
+  SafetyCertificateOutlined,
+  ScheduleOutlined,
   SettingOutlined,
   TeamOutlined,
-  SafetyCertificateOutlined,
-  FileTextOutlined,
-  NodeIndexOutlined,
-  AuditOutlined,
 } from '@ant-design/icons';
-import type { MenuProps } from 'antd';
-import { cn } from '@/utils/cn';
+import {Icons} from '@/components/icons'
+import {cn} from '@/utils/cn';
 
 interface MemberClusterSidebarProps {
   className?: string;
@@ -46,9 +47,9 @@ const MemberClusterSidebar: FC<MemberClusterSidebarProps> = () => {
   };
 
   const getMenuItem = (
-    label: React.ReactNode,
-    key: React.Key,
-    icon?: React.ReactNode,
+    label: ReactNode,
+    key: Key,
+    icon?: ReactNode,
     children?: MenuItem[],
   ): MenuItem => {
     return {
@@ -61,6 +62,7 @@ const MemberClusterSidebar: FC<MemberClusterSidebarProps> = () => {
   };
 
   const menuItems: MenuItem[] = [
+    getMenuItem('Overview', 'overview', <Icons.panelsTopLeft width={16} height={16} />),
     getMenuItem('Workload', 'workload-group', <DeploymentUnitOutlined />, [
       getMenuItem('CronJobs', 'workload/cronjobs', <ScheduleOutlined />),
       getMenuItem('DaemonSets', 'workload/daemonsets', <ControlOutlined />),
@@ -124,8 +126,7 @@ const MemberClusterSidebar: FC<MemberClusterSidebarProps> = () => {
     // Extract the path after member cluster name
     const basePath = `/member-cluster/${memberClusterName}/`;
     if (pathname.startsWith(basePath)) {
-      const subPath = pathname.slice(basePath.length);
-      return subPath;
+      return pathname.slice(basePath.length);
     }
 
     return 'overview';

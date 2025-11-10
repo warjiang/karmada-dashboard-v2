@@ -1,72 +1,41 @@
-import { Table, Tag, Button, Space, Tooltip } from 'antd';
-import { EyeOutlined, ExclamationCircleOutlined, InfoCircleOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import { Input, Table, Tag, Space, Tooltip, Button } from 'antd';
+import {
+  EyeOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
+  WarningOutlined,
+  CheckCircleOutlined,
+} from '@ant-design/icons';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useMemberClusterContext } from '@/hooks';
+import {
+  Event as ClusterEvent,
+  GetMemberClusterEvents,
+} from '@/services/member-cluster/event';
 
 export default function MemberClusterEvents() {
   const { memberClusterName } = useMemberClusterContext();
 
-  const mockEvents = [
-    {
-      name: 'Pulling',
-      namespace: 'default',
-      type: 'Normal',
-      reason: 'Pulling',
-      object: 'Pod/webapp-deployment-7b8c5f9d4-xyz12',
-      source: 'kubelet',
-      message: 'Pulling image "nginx:1.21"',
-      count: 1,
-      firstSeen: '2m',
-      lastSeen: '2m'
+  const [filter, setFilter] = useState<{
+    namespace: string;
+    searchText: string;
+  }>({
+    namespace: '',
+    searchText: '',
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['GetMemberClusterEvents', memberClusterName, filter],
+    queryFn: async () => {
+      const ret = await GetMemberClusterEvents({
+        memberClusterName,
+        namespace: filter.namespace || undefined,
+        keyword: filter.searchText,
+      });
+      return ret.data;
     },
-    {
-      name: 'Failed',
-      namespace: 'production',
-      type: 'Warning',
-      reason: 'Failed',
-      object: 'Pod/database-0',
-      source: 'kubelet',
-      message: 'Failed to pull image "postgres:14": rpc error: code = Unknown',
-      count: 5,
-      firstSeen: '15m',
-      lastSeen: '1m'
-    },
-    {
-      name: 'Scheduled',
-      namespace: 'default',
-      type: 'Normal',
-      reason: 'Scheduled',
-      object: 'Pod/api-server-6d8b9c7f5-abc34',
-      source: 'default-scheduler',
-      message: 'Successfully assigned default/api-server-6d8b9c7f5-abc34 to node-1',
-      count: 1,
-      firstSeen: '5m',
-      lastSeen: '5m'
-    },
-    {
-      name: 'Unhealthy',
-      namespace: 'monitoring',
-      type: 'Warning',
-      reason: 'Unhealthy',
-      object: 'Pod/prometheus-0',
-      source: 'kubelet',
-      message: 'Liveness probe failed: HTTP probe failed with statuscode: 503',
-      count: 3,
-      firstSeen: '10m',
-      lastSeen: '3m'
-    },
-    {
-      name: 'Created',
-      namespace: 'kube-system',
-      type: 'Normal',
-      reason: 'Created',
-      object: 'Pod/coredns-78fcd69978-def56',
-      source: 'kubelet',
-      message: 'Created container coredns',
-      count: 1,
-      firstSeen: '1h',
-      lastSeen: '1h'
-    }
-  ];
+  });
 
   const getTypeTag = (type: string) => {
     const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
@@ -84,7 +53,8 @@ export default function MemberClusterEvents() {
     );
   };
 
-  const getReasonTag = (reason: string, type: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const getReasonTag = (reason: string, _type: string) => {
     const reasonColors: Record<string, string> = {
       'Pulling': 'blue',
       'Pulled': 'green',
@@ -108,7 +78,7 @@ export default function MemberClusterEvents() {
     const [kind, name] = object.split('/');
     return (
       <div className="flex items-center gap-1">
-        <Tag color="geekblue" size="small">{kind}</Tag>
+        <Tag color="geekblue">{kind}</Tag>
         <code className="text-xs">{name}</code>
       </div>
     );
@@ -147,7 +117,10 @@ export default function MemberClusterEvents() {
       title: 'Reason',
       dataIndex: 'reason',
       key: 'reason',
-      render: (reason: string, record: any) => getReasonTag(reason, record.type),
+      render: (reason: string, record: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        return getReasonTag(reason, record.type)
+      },
       width: 120
     },
     {
@@ -159,13 +132,13 @@ export default function MemberClusterEvents() {
     },
     {
       title: 'Namespace',
-      dataIndex: 'namespace',
+      dataIndex: 'objectNamespace',
       key: 'namespace',
       width: 120
     },
     {
       title: 'Source',
-      dataIndex: 'source',
+      dataIndex: 'sourceComponent',
       key: 'source',
       render: (source: string) => <code className="text-xs">{source}</code>,
       width: 120
@@ -200,7 +173,7 @@ export default function MemberClusterEvents() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View event details">
+          <Button icon={<EyeOutlined />}  title="View event details">
             View
           </Button>
         </Space>
@@ -210,34 +183,38 @@ export default function MemberClusterEvents() {
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        Events in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View Kubernetes Events in the "{memberClusterName}" cluster. Events provide insights into cluster activity and troubleshooting.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className="flex flex-row space-x-4 mb-4">
+        <Input.Search
+          placeholder="Search by reason or message"
+          className="w-[300px]"
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockEvents}
-        rowKey={(record, index) => `${record.object}-${index}`}
-        pagination={{
-          pageSize: 20,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} events`
-        }}
-        scroll={{ x: 1200 }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Events are automatically cleaned up after a retention period. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific Events.
-          <br />
-          <strong>Types:</strong> Normal (informational), Warning (potential issues), Error (failures)
-        </p>
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          columns={columns}
+          dataSource={data?.events || []}
+          rowKey={(record: ClusterEvent, index) =>
+            `${record.object}-${record.firstSeen}-${index}`
+          }
+          pagination={{
+            pageSize: 20,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} events`,
+          }}
+          loading={isLoading}
+          scroll={{ x: 1200 }}
+        />
       </div>
     </div>
   );

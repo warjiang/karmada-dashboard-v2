@@ -17,8 +17,7 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -113,18 +112,16 @@ export async function GetHorizontalPodAutoscalers(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      horizontalPodAutoscalers: HorizontalPodAutoscaler[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    horizontalPodAutoscalers: HorizontalPodAutoscaler[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetHorizontalPodAutoscalerDetail(params: {
@@ -132,14 +129,11 @@ export async function GetHorizontalPodAutoscalerDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & HorizontalPodAutoscaler
-    >
-  >(`/horizontalpodautoscaler/${namespace}/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<
+    {
+      errors: string[];
+    } & HorizontalPodAutoscaler>(`/horizontalpodautoscaler/${namespace}/${name}`);
+  return resp;
 }
 
 export async function GetHorizontalPodAutoscalersForResource(params: {
@@ -148,14 +142,12 @@ export async function GetHorizontalPodAutoscalersForResource(params: {
   name: string;
 }) {
   const { kind, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      horizontalPodAutoscalers: HorizontalPodAutoscaler[];
-    }>
-  >(`/${kind}/${namespace}/${name}/horizontalpodautoscaler`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    horizontalPodAutoscalers: HorizontalPodAutoscaler[];
+  }>(`/${kind}/${namespace}/${name}/horizontalpodautoscaler`);
+  return resp;
 }

@@ -17,8 +17,7 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -48,18 +47,16 @@ export async function GetMemberClusterNamespaces(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      namespaces: Namespace[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/namespace`, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    namespaces: Namespace[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/namespace`, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterNamespaceDetail(params: {
@@ -67,14 +64,10 @@ export async function GetMemberClusterNamespaceDetail(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & Namespace
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/namespace/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & Namespace>(`/clusterapi/${memberClusterName}/api/v1/namespace/${name}`);
+  return resp;
 }
 
 export async function GetMemberClusterNamespaceEvents(params: {
@@ -82,16 +75,14 @@ export async function GetMemberClusterNamespaceEvents(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: any[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/namespace/${name}/event`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: any[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/namespace/${name}/event`);
+  return resp;
 }
 
 export async function CreateMemberClusterNamespace(params: {
@@ -99,9 +90,9 @@ export async function CreateMemberClusterNamespace(params: {
   spec: NamespaceSpec;
 }) {
   const { memberClusterName, spec } = params;
-  const resp = await karmadaClient.post<IResponse<string>>(
+  const resp = await karmadaMemberClusterClient.post<string>(
     `/clusterapi/${memberClusterName}/api/v1/namespace`,
     spec,
   );
-  return resp.data;
+  return resp;
 }

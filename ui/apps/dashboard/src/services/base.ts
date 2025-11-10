@@ -1,21 +1,22 @@
 /*
-Copyright 2024 The Karmada Authors.
+ Copyright 2024 The Karmada Authors.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+     http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
 
 import axios from 'axios';
 import _ from 'lodash';
+import { notification } from 'antd';
 
 let pathPrefix = window.__path_prefix__ || '';
 if (!pathPrefix.startsWith('/')) {
@@ -26,10 +27,72 @@ if (!pathPrefix.endsWith('/')) {
 }
 export const routerBase = pathPrefix;
 const baseURL: string = _.join([pathPrefix, 'api/v1'], '');
+const memberclusterBaseURL: string = pathPrefix;
 
 export const karmadaClient = axios.create({
   baseURL,
 });
+
+export const karmadaMemberClusterClient = axios.create({
+  baseURL: memberclusterBaseURL,
+});
+
+interface K8sErrStatus {
+  status?: string;
+  message?: string;
+  reason?: string;
+  code?: number;
+  details?: {
+    group?: string;
+    kind?: string;
+  };
+}
+
+interface MemberClusterErrorItem {
+  ErrStatus?: K8sErrStatus;
+}
+
+interface MemberClusterResponse {
+  errors?: MemberClusterErrorItem[];
+}
+
+karmadaMemberClusterClient.interceptors.response.use(
+  (response) => {
+    const data = response.data as MemberClusterResponse | undefined;
+    const errors = data?.errors ?? [];
+
+    if (Array.isArray(errors) && errors.length > 0) {
+      const messages = errors
+        .map((e) => e.ErrStatus?.message)
+        .filter((m): m is string => !!m);
+
+      if (messages.length > 0) {
+        // 多个错误分别弹出
+        messages.forEach((msg) => {
+          notification.error({
+            message: '成员集群请求失败',
+            description: msg,
+            duration: 5,
+          });
+        });
+      }
+    }
+
+    return response;
+  },
+  (error) => {
+    const status = error?.response?.status;
+    if (status === 403) {
+      notification.error({
+        message: '成员集群权限不足',
+        description: '当前账号没有访问成员集群相关资源的权限（HTTP 403）',
+        duration: 5,
+      });
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export interface IResponse<Data = {}> {
   code: number;

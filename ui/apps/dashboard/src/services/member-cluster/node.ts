@@ -17,12 +17,10 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
-  TypeMeta,
+  TypeMeta
 } from '../base';
-
 export interface NodeCondition {
   type: string;
   status: string;
@@ -103,18 +101,16 @@ export async function GetMemberClusterNodes(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      nodes: Node[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/node`, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    nodes: Node[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/node`, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterNodeDetail(params: {
@@ -122,14 +118,10 @@ export async function GetMemberClusterNodeDetail(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & NodeDetail
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/node/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & NodeDetail>(`/clusterapi/${memberClusterName}/api/v1/node/${name}`);
+  return resp;
 }
 
 export async function GetMemberClusterNodeEvents(params: {
@@ -137,16 +129,14 @@ export async function GetMemberClusterNodeEvents(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: any[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/node/${name}/event`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: any[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/node/${name}/event`);
+  return resp;
 }
 
 export async function GetMemberClusterNodePods(params: {
@@ -154,16 +144,14 @@ export async function GetMemberClusterNodePods(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(`/clusterapi/${memberClusterName}/api/v1/node/${name}/pod`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/node/${name}/pod`);
+  return resp;
 }
 
 export async function DrainMemberClusterNode(params: {
@@ -171,8 +159,8 @@ export async function DrainMemberClusterNode(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<any>(
     `/clusterapi/${memberClusterName}/api/v1/node/${name}/drain`,
   );
-  return resp.data;
+  return resp;
 }
