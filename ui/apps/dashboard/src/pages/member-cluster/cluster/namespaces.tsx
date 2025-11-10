@@ -84,7 +84,7 @@ export default function MemberClusterNamespaces() {
       <Tag color="default">Disabled</Tag>;
   };
 
-  const getResourceUsage = (current: number, limit: number | null, resourceType: string) => {
+  const getResourceUsage = (current: number, limit: number | null, _resourceType: string) => {
     if (limit === null) {
       return <span className="text-sm">{current}</span>;
     }
@@ -96,7 +96,7 @@ export default function MemberClusterNamespaces() {
       <div className="flex items-center gap-2">
         <Progress
           percent={percent}
-          size="small"
+         
           status={status}
           showInfo={false}
           style={{ width: 60 }}
@@ -121,7 +121,7 @@ export default function MemberClusterNamespaces() {
     return (
       <div className="flex items-center gap-1">
         <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
-        <Tag size="small" color="purple">+{labelPairs.length - 1}</Tag>
+        <Tag  color="purple">+{labelPairs.length - 1}</Tag>
       </div>
     );
   };
@@ -181,15 +181,15 @@ export default function MemberClusterNamespaces() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View namespace details">
+          <Button icon={<EyeOutlined />}  title="View namespace details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit namespace">
+          <Button icon={<EditOutlined />}  title="Edit namespace">
             Edit
           </Button>
           <Button 
             icon={<DeleteOutlined />} 
-            size="small" 
+             
             danger 
             title="Delete namespace"
             disabled={record.name === 'default' || record.name === 'kube-system'}

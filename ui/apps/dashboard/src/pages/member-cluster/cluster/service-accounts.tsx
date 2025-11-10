@@ -81,7 +81,7 @@ export default function MemberClusterServiceAccounts() {
       <Tooltip title={secrets.join(', ')}>
         <div className="flex items-center gap-1">
           <code className="text-xs">{secrets[0]}</code>
-          <Tag size="small" color="blue">+{secrets.length - 1}</Tag>
+          <Tag  color="blue">+{secrets.length - 1}</Tag>
         </div>
       </Tooltip>
     );
@@ -94,7 +94,7 @@ export default function MemberClusterServiceAccounts() {
     
     if (secrets.length === 1) {
       return (
-        <Tag color="purple" size="small" icon={<SafetyCertificateOutlined />}>
+        <Tag color="purple"  icon={<SafetyCertificateOutlined />}>
           {secrets[0]}
         </Tag>
       );
@@ -103,10 +103,10 @@ export default function MemberClusterServiceAccounts() {
     return (
       <Tooltip title={secrets.join(', ')}>
         <div className="flex items-center gap-1">
-          <Tag color="purple" size="small" icon={<SafetyCertificateOutlined />}>
+          <Tag color="purple"  icon={<SafetyCertificateOutlined />}>
             {secrets[0]}
           </Tag>
-          <Tag size="small" color="cyan">+{secrets.length - 1}</Tag>
+          <Tag  color="cyan">+{secrets.length - 1}</Tag>
         </div>
       </Tooltip>
     );
@@ -130,7 +130,7 @@ export default function MemberClusterServiceAccounts() {
         <div className="flex items-center gap-1">
           <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
           {remainingCount > 0 && (
-            <Tag size="small" color="purple">+{remainingCount}</Tag>
+            <Tag  color="purple">+{remainingCount}</Tag>
           )}
         </div>
       </Tooltip>
@@ -188,15 +188,15 @@ export default function MemberClusterServiceAccounts() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View ServiceAccount details">
+          <Button icon={<EyeOutlined />}  title="View ServiceAccount details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit ServiceAccount">
+          <Button icon={<EditOutlined />}  title="Edit ServiceAccount">
             Edit
           </Button>
           <Button 
             icon={<DeleteOutlined />} 
-            size="small" 
+             
             danger 
             title="Delete ServiceAccount"
             disabled={record.name === 'default'}

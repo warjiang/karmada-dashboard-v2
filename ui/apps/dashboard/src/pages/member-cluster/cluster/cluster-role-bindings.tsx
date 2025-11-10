@@ -80,7 +80,7 @@ export default function MemberClusterClusterRoleBindings() {
       }>
         <div className="flex flex-col gap-1">
           {subjects.slice(0, 2).map(subject => getSubjectTag(subject))}
-          <Tag size="small" color="cyan">+{subjects.length - 2} more</Tag>
+          <Tag  color="cyan">+{subjects.length - 2} more</Tag>
         </div>
       </Tooltip>
     );
@@ -119,13 +119,13 @@ export default function MemberClusterClusterRoleBindings() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit ClusterRoleBinding">
+          <Button icon={<EditOutlined />}  title="Edit ClusterRoleBinding">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete ClusterRoleBinding">
+          <Button icon={<DeleteOutlined />}  danger title="Delete ClusterRoleBinding">
             Delete
           </Button>
         </Space>

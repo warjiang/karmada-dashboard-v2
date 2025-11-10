@@ -133,7 +133,7 @@ export default function MemberClusterServices() {
         <div className="flex items-center gap-1">
           <code className="text-xs">{portList[0]}</code>
           {portList.length > 1 && (
-            <Tag size="small" color="blue">+{portList.length - 1}</Tag>
+            <Tag  color="blue">+{portList.length - 1}</Tag>
           )}
         </div>
       </Tooltip>
@@ -198,13 +198,13 @@ export default function MemberClusterServices() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit Service">
+          <Button icon={<EditOutlined />}  title="Edit Service">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete Service">
+          <Button icon={<DeleteOutlined />}  danger title="Delete Service">
             Delete
           </Button>
         </Space>

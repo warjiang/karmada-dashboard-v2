@@ -117,22 +117,22 @@ export default function MemberClusterCronJobs() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
           {record.suspend ? (
-            <Button icon={<PlayCircleOutlined />} size="small" title="Resume CronJob" type="primary">
+            <Button icon={<PlayCircleOutlined />}  title="Resume CronJob" type="primary">
               Resume
             </Button>
           ) : (
-            <Button icon={<PauseCircleOutlined />} size="small" title="Suspend CronJob">
+            <Button icon={<PauseCircleOutlined />}  title="Suspend CronJob">
               Suspend
             </Button>
           )}
-          <Button icon={<EditOutlined />} size="small" title="Edit CronJob">
+          <Button icon={<EditOutlined />}  title="Edit CronJob">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete CronJob">
+          <Button icon={<DeleteOutlined />}  danger title="Delete CronJob">
             Delete
           </Button>
         </Space>

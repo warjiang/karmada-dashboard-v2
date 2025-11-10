@@ -121,7 +121,7 @@ export default function MemberClusterJobs() {
       <div className="flex items-center gap-2">
         <Progress
           percent={percent}
-          size="small"
+         
           status={status}
           showInfo={false}
           style={{ width: 60 }}
@@ -186,17 +186,17 @@ export default function MemberClusterJobs() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
           {record.status === 'Complete' || record.status === 'Failed' ? (
-            <Button icon={<RedoOutlined />} size="small" title="Create job from template">
+            <Button icon={<RedoOutlined />}  title="Create job from template">
               Recreate
             </Button>
           ) : null}
           <Button 
             icon={<DeleteOutlined />} 
-            size="small" 
+             
             danger 
             title="Delete job"
             disabled={record.status === 'Running'}

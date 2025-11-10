@@ -79,7 +79,7 @@ export default function MemberClusterDaemonSets() {
       <div className="flex items-center gap-2">
         <Progress
           percent={percent}
-          size="small"
+         
           status={status}
           showInfo={false}
           style={{ width: 60 }}
@@ -169,13 +169,13 @@ export default function MemberClusterDaemonSets() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit DaemonSet">
+          <Button icon={<EditOutlined />}  title="Edit DaemonSet">
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete DaemonSet">
+          <Button icon={<DeleteOutlined />}  danger title="Delete DaemonSet">
             Delete
           </Button>
         </Space>

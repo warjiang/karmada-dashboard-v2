@@ -1,5 +1,5 @@
 import { Table, Tag, Button, Space } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EyeOutlined, EditOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
 
 export default function MemberClusterDeployments() {
@@ -77,14 +77,14 @@ export default function MemberClusterDeployments() {
       key: 'actions',
       render: () => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View details">
+          <Button icon={<EyeOutlined />}  title="View details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit deployment">
+          <Button icon={<EditOutlined />}  title="Edit deployment">
             Edit
           </Button>
           {/* 
-          <Button icon={<DeleteOutlined />} size="small" danger title="Delete deployment">
+          <Button icon={<DeleteOutlined />}  danger title="Delete deployment">
             Delete
           </Button> */}
         </Space>

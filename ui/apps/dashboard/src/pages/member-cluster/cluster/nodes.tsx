@@ -1,4 +1,4 @@
-import { Table, Tag, Button, Space, Progress, Tooltip } from 'antd';
+import { Table, Tag, Button, Space, Progress } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined, LaptopOutlined, WarningOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
 
@@ -91,7 +91,7 @@ export default function MemberClusterNodes() {
     return (
       <div className="flex flex-wrap gap-1">
         {roles.map((role, index) => (
-          <Tag key={index} color={role === 'control-plane' || role === 'master' ? 'red' : 'blue'} size="small">
+          <Tag key={index} color={role === 'control-plane' || role === 'master' ? 'red' : 'blue'}>
             {role}
           </Tag>
         ))}
@@ -99,7 +99,7 @@ export default function MemberClusterNodes() {
     );
   };
 
-  const getResourceUsage = (usage: string, allocatable: string, unit: string = '') => {
+  const getResourceUsage = (usage: string, allocatable: string, _unit: string = '') => {
     const usageNum = parseFloat(usage.replace(/[^0-9.]/g, ''));
     const allocatableNum = parseFloat(allocatable.replace(/[^0-9.]/g, ''));
     const percent = Math.round((usageNum / allocatableNum) * 100);
@@ -110,7 +110,7 @@ export default function MemberClusterNodes() {
       <div className="flex items-center gap-2">
         <Progress
           percent={percent}
-          size="small"
+         
           status={status}
           showInfo={false}
           style={{ width: 60 }}
@@ -128,7 +128,7 @@ export default function MemberClusterNodes() {
       <div className="flex items-center gap-2">
         <Progress
           percent={percent}
-          size="small"
+         
           status={status}
           showInfo={false}
           style={{ width: 60 }}
@@ -145,12 +145,12 @@ export default function MemberClusterNodes() {
     return (
       <div className="flex flex-col gap-1">
         {readyCondition && (
-          <Tag color={readyCondition.status === 'True' ? 'green' : 'red'} size="small">
+          <Tag color={readyCondition.status === 'True' ? 'green' : 'red'}>
             {readyCondition.type}: {readyCondition.status}
           </Tag>
         )}
         {warningConditions.length > 0 && (
-          <Tag color="orange" size="small">
+          <Tag color="orange">
             {warningConditions.length} warning(s)
           </Tag>
         )}
@@ -238,15 +238,15 @@ export default function MemberClusterNodes() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View node details">
+          <Button icon={<EyeOutlined />}  title="View node details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit node labels">
+          <Button icon={<EditOutlined />}  title="Edit node labels">
             Edit
           </Button>
           <Button 
             icon={<DeleteOutlined />} 
-            size="small" 
+             
             danger 
             title="Drain and delete node"
             disabled={record.roles.includes('control-plane') || record.roles.includes('master')}

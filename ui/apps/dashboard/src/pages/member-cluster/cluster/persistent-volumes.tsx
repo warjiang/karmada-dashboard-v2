@@ -115,7 +115,7 @@ export default function MemberClusterPersistentVolumes() {
     return (
       <div className="flex gap-1">
         {modes.map((mode, index) => (
-          <Tag key={index} size="small" color="geekblue">
+          <Tag key={index}  color="geekblue">
             {modeAbbrev[mode] || mode}
           </Tag>
         ))}
@@ -131,7 +131,7 @@ export default function MemberClusterPersistentVolumes() {
     const [namespace, name] = claim.split('/');
     return (
       <div className="flex items-center gap-1">
-        <Tag color="cyan" size="small">{namespace}</Tag>
+        <Tag color="cyan">{namespace}</Tag>
         <code className="text-xs">{name}</code>
       </div>
     );
@@ -152,7 +152,7 @@ export default function MemberClusterPersistentVolumes() {
       <div className="flex items-center gap-2">
         <Progress
           percent={usagePercent}
-          size="small"
+         
           status={getStatus()}
           showInfo={false}
           style={{ width: 60 }}
@@ -219,15 +219,15 @@ export default function MemberClusterPersistentVolumes() {
       key: 'actions',
       render: (_: any, record: any) => (
         <Space>
-          <Button icon={<EyeOutlined />} size="small" title="View PV details">
+          <Button icon={<EyeOutlined />}  title="View PV details">
             View
           </Button>
-          <Button icon={<EditOutlined />} size="small" title="Edit PV">
+          <Button icon={<EditOutlined />}  title="Edit PV">
             Edit
           </Button>
           <Button 
             icon={<DeleteOutlined />} 
-            size="small" 
+             
             danger 
             title="Delete PV"
             disabled={record.status === 'Bound'}
