@@ -63,7 +63,7 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
   }, [data]);
   return (
     <div className={cn('w-full', 'h-full', 'overflow-y-auto')}>
-      <Menu
+      <Menuk
         onClick={onClick}
         style={{ width: collapsed ? '80px' : getSidebarWidth() }}
         selectedKeys={selectKeys}
