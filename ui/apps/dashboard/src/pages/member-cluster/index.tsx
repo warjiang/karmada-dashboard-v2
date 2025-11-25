@@ -5,6 +5,7 @@ import { Layout as AntdLayout } from 'antd';
 import { cn } from '@/utils/cn.ts';
 import { getSidebarWidth } from '@/utils/i18n';
 import { useWindowSize } from '@uidotdev/usehooks';
+import Panel from '@/components/panel';
 
 const { Sider: AntdSider, Content: AntdContent } = AntdLayout;
 
@@ -42,7 +43,9 @@ export default function MemberCluster() {
           />
         </AntdSider>
         <AntdContent>
-          <Outlet context={{ memberClusterName }} />
+          <Panel>
+            <Outlet context={{ memberClusterName }} />
+          </Panel>
         </AntdContent>
       </AntdLayout>
     </>
