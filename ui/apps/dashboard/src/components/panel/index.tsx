@@ -19,6 +19,7 @@ import { useMatches } from 'react-router-dom';
 import { Breadcrumb } from 'antd';
 import { getRoutes, IRouteObjectHandle } from '@/routes/route.tsx';
 import * as React from 'react';
+import { ItemType } from 'antd/es/breadcrumb/Breadcrumb';
 
 interface IPanelProps {
   children: ReactNode;
@@ -64,7 +65,7 @@ const Panel: FC<IPanelProps> = (props) => {
   return (
     <div className="w-full h-full px-[30px] py-[20px] box-border bg-[#FAFBFC]">
       <div className="w-full h-full bg-white box-border p-[12px] overflow-y-scroll">
-        <Breadcrumb className="mb-4" items={breadcrumbs} />
+        <Breadcrumb className="mb-4" items={breadcrumbs as ItemType[]} />
         {children}
       </div>
     </div>
