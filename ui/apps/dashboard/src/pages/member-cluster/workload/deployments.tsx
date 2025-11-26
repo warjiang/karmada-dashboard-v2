@@ -23,15 +23,12 @@ export default function MemberClusterDeployments() {
       const clusters = await GetMemberClusterWorkloads({
           memberClusterName:memberClusterName,
         kind: filter.kind,
-        namespace: filter.selectedWorkSpace,
+        namespace: 'example',//filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
       return clusters.data || {};
     },
   });
-    console.log("payload", {
-        data,isLoading, refetch
-    })
   // Mock data for demonstration
   const mockDeployments = [
     {
@@ -133,6 +130,7 @@ export default function MemberClusterDeployments() {
             showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} deployments`
           }}
           scroll={{ y: 'calc(100vh - 400px)' }}
+          loading={isLoading}
         />
       </div>
       
