@@ -1,10 +1,12 @@
-import { Table, Tag, Button, Space } from 'antd';
+import { Table, Tag, Button, Space, Input, Select} from 'antd';
 import { EyeOutlined, EditOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
 import {useQuery} from "@tanstack/react-query";
 import {WorkloadKind} from "@/services";
 import {useState} from "react";
 import {GetMemberClusterWorkloads} from "@/services/member-cluster/workload.ts";
+import useNamespace from "../../../hooks/use-namespace.ts";
+import i18nInstance from "@/utils/i18n.tsx";
 
 export default function MemberClusterDeployments() {
   const { memberClusterName } = useMemberClusterContext();
@@ -17,45 +19,19 @@ export default function MemberClusterDeployments() {
     selectedWorkSpace: '',
     searchText: '',
   });
+  const { nsOptions, isNsDataLoading } = useNamespace({});
     const { data, isLoading, refetch } = useQuery({
     queryKey: [memberClusterName, 'GetWorkloads', JSON.stringify(filter)],
     queryFn: async () => {
       const clusters = await GetMemberClusterWorkloads({
-          memberClusterName:memberClusterName,
+          memberClusterName: memberClusterName,
         kind: filter.kind,
-        namespace: 'example',//filter.selectedWorkSpace,
+        namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
       return clusters.data || {};
     },
   });
-  // Mock data for demonstration
-  const mockDeployments = [
-    {
-      name: 'nginx-deployment',
-      namespace: 'default',
-      replicas: '3/3',
-      age: '2d',
-      status: 'Running',
-      images: 'nginx:1.21'
-    },
-    {
-      name: 'api-server',
-      namespace: 'production',
-      replicas: '5/5',
-      age: '7d',
-      status: 'Running',
-      images: 'api-server:v1.2.0'
-    },
-    {
-      name: 'frontend',
-      namespace: 'staging',
-      replicas: '1/2',
-      age: '3d',
-      status: 'Pending',
-      images: 'frontend:latest'
-    }
-  ];
 
   const getStatusTag = (status: string) => {
     const color = status === 'Running' ? 'success' : status === 'Pending' ? 'processing' : 'error';
@@ -118,10 +94,44 @@ export default function MemberClusterDeployments() {
 
   return (
     <div className="h-full w-full flex flex-col p-4">
+      <div className={'flex flex-row space-x-4 mb-4'}>
+        <h3 className={'leading-[32px]'}>
+          {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
+        </h3>
+        <Select
+            options={nsOptions}
+            className={'min-w-[200px]'}
+            value={filter.selectedWorkSpace}
+            loading={isNsDataLoading}
+            showSearch
+            allowClear
+            onChange={(v) => {
+              setFilter({
+                ...filter,
+                selectedWorkSpace: v,
+              });
+            }}
+        />
+        <Input.Search
+            placeholder={i18nInstance.t(
+                'cfaff3e369b9bd51504feb59bf0972a0',
+                '按命名空间搜索',
+            )}
+            className={'w-[300px]'}
+            onPressEnter={(e) => {
+              const input = e.currentTarget.value;
+              setFilter({
+                ...filter,
+                searchText: input,
+              });
+            }}
+        />
+      </div>
+
       <div className="flex-1 flex flex-col">
         <Table
           columns={columns}
-          dataSource={mockDeployments}
+          dataSource={data?.items || []}
           rowKey="name"
           pagination={{
             pageSize: 10,
@@ -133,13 +143,7 @@ export default function MemberClusterDeployments() {
           loading={isLoading}
         />
       </div>
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded flex-shrink-0">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific deployments.
-        </p>
-      </div>
+
     </div>
   );
 }
