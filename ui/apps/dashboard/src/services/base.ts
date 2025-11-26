@@ -26,9 +26,14 @@ if (!pathPrefix.endsWith('/')) {
 }
 export const routerBase = pathPrefix;
 const baseURL: string = _.join([pathPrefix, 'api/v1'], '');
+const memberclusterBaseURL: string = pathPrefix;
 
 export const karmadaClient = axios.create({
   baseURL,
+});
+
+export const karmadaMemberClusterClient = axios.create({
+  baseURL: memberclusterBaseURL,
 });
 
 export interface IResponse<Data = {}> {

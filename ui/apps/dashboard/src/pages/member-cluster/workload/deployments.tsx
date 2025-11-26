@@ -1,10 +1,37 @@
 import { Table, Tag, Button, Space } from 'antd';
 import { EyeOutlined, EditOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
+import {useQuery} from "@tanstack/react-query";
+import {WorkloadKind} from "@/services";
+import {useState} from "react";
+import {GetMemberClusterWorkloads} from "@/services/member-cluster/workload.ts";
 
 export default function MemberClusterDeployments() {
   const { memberClusterName } = useMemberClusterContext();
-
+  const [filter, setFilter] = useState<{
+    kind: WorkloadKind;
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    kind: WorkloadKind.Deployment,
+    selectedWorkSpace: '',
+    searchText: '',
+  });
+    const { data, isLoading, refetch } = useQuery({
+    queryKey: [memberClusterName, 'GetWorkloads', JSON.stringify(filter)],
+    queryFn: async () => {
+      const clusters = await GetMemberClusterWorkloads({
+          memberClusterName:memberClusterName,
+        kind: filter.kind,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      return clusters.data || {};
+    },
+  });
+    console.log("payload", {
+        data,isLoading, refetch
+    })
   // Mock data for demonstration
   const mockDeployments = [
     {

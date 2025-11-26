@@ -15,13 +15,13 @@ limitations under the License.
 */
 
 import {
-  convertDataSelectQuery,
-  DataSelectQuery,
-  IResponse,
-  karmadaClient,
-  RollingUpdateStrategy,
-  Selector,
-  WorkloadKind,
+    convertDataSelectQuery,
+    DataSelectQuery,
+    IResponse,
+    karmadaClient, karmadaMemberClusterClient,
+    RollingUpdateStrategy,
+    Selector,
+    WorkloadKind,
 } from '../base';
 import { ObjectMeta, TypeMeta } from '../base';
 
@@ -74,7 +74,7 @@ export async function GetMemberClusterWorkloads(params: {
   const url = namespace
     ? `/clusterapi/${memberClusterName}/api/v1/${kind}/${namespace}`
     : `/clusterapi/${memberClusterName}/api/v1/${kind}`;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
