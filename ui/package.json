@@ -25,16 +25,16 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@changesets/cli": "^2.27.6",
+    "@changesets/cli": "^2.29.8",
     "@types/node": "^20.12.11",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.7",
     "tsup": "^8.5.1",
-    "tsx": "^4.15.6",
+    "tsx": "^4.21.0",
     "turbo": "^2.0.6"
   },
   "dependencies": {
-    "dayjs": "^1.11.11"
+    "dayjs": "^1.11.19"
   },
   "packageManager": "pnpm@9.1.2",
   "pnpm": {
