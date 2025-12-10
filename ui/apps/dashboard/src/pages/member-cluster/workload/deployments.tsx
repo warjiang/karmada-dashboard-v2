@@ -5,12 +5,13 @@ import { useQuery } from '@tanstack/react-query';
 import { WorkloadKind } from '@/services';
 import { useState } from 'react';
 import {
-  GetMemberClusterWorkloads,
-  Workload,
+    GetMemberClusterWorkloads,
+    Workload,
 } from '@/services/member-cluster/workload.ts';
 import useNamespace from '../../../hooks/use-namespace.ts';
 import i18nInstance from '@/utils/i18n.tsx';
 import dayjs from 'dayjs';
+import {GetResource} from "@/services/member-cluster/unstructured.ts";
 
 export default function MemberClusterDeployments() {
   const { memberClusterName } = useMemberClusterContext();
@@ -85,9 +86,17 @@ export default function MemberClusterDeployments() {
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
+      render: (_, record: Workload) => (
         <Space>
-          <Button icon={<EyeOutlined />} title="View details">
+          <Button icon={<EyeOutlined />} title="View details" onClick={async () => {
+              const workloadDetail = await GetResource({
+                memberClusterName: memberClusterName,
+                namespace: record.objectMeta.namespace,
+                name: record.objectMeta.name,
+                kind: record.typeMeta.kind as WorkloadKind,
+              })
+              console.log('workloadDetail', workloadDetail)
+          }}>
             View
           </Button>
           <Button icon={<EditOutlined />} title="Edit deployment">
@@ -101,7 +110,6 @@ export default function MemberClusterDeployments() {
       ),
     },
   ];
-  console.log('x', data);
   return (
     <div className="h-full w-full flex flex-col p-4">
       <div className={'flex flex-row space-x-4 mb-4'}>

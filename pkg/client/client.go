@@ -181,3 +181,16 @@ func clientForMemberClusterAPIServer(request *http.Request, memberClusterName st
 	config.Host = config.Host + fmt.Sprintf(proxyURL, memberClusterName)
 	return kubeclient.NewForConfig(config)
 }
+
+func ConfigForMemberClusterFromRequest(request *http.Request) (*rest.Config, error) {
+	memberClusterName := request.Header.Get(MemberClusterHeaderName)
+	if memberClusterName == "" {
+		return nil, fmt.Errorf("member cluster name is empty")
+	}
+	cfg, err := restConfigFromRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Host = cfg.Host + fmt.Sprintf(proxyURL, memberClusterName)
+	return cfg, nil
+}

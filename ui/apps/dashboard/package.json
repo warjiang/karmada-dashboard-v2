@@ -28,8 +28,6 @@
     ]
   },
   "dependencies": {
-    "@chatui/core": "^3.1.0",
-    "@karmada/chatui": "workspace:*",
     "@ant-design/icons": "^6.1.0",
     "@chatui/core": "^3.1.0",
     "@karmada/chatui": "workspace:*",
