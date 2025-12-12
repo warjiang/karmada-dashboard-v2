@@ -11,7 +11,7 @@ permissions:
 jobs:
   build-fronted:
     name: build frontend bundle
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+    # if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     steps:
       - name: checkout code
@@ -40,7 +40,7 @@ jobs:
 
   build-and-push-web:
     name: build and push web image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+    # if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     needs: [ "build-fronted" ]
     env:
@@ -95,7 +95,7 @@ jobs:
 
   build-and-push-api:
     name: build and push api image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+    # if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     env:
       IMAGE_NAME: karmada/karmada-dashboard-api
@@ -140,7 +140,7 @@ jobs:
 
   build-and-push-terminal:
     name: build and push terminal image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+    # if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     env:
       IMAGE_NAME: karmada/karmada-dashboard-terminal
@@ -185,7 +185,7 @@ jobs:
 
   build-and-push-kubernetes-dashboard-api:
     name: build and push kubernetes-dashboard-api image
-    if: ${{ github.repository == 'karmada-io/dashboard' }}
+    #  if: ${{ github.repository == 'karmada-io/dashboard' }}
     runs-on: ubuntu-22.04
     env:
       IMAGE_NAME: karmada/kubernetes-dashboard-api
