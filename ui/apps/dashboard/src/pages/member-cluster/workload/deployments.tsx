@@ -11,7 +11,7 @@ import {
 import useNamespace from '../../../hooks/use-namespace.ts';
 import i18nInstance from '@/utils/i18n.tsx';
 import dayjs from 'dayjs';
-import {GetResource} from "@/services/member-cluster/unstructured.ts";
+// import {GetResource} from "@/services/member-cluster/unstructured.ts";
 
 export default function MemberClusterDeployments() {
   const { memberClusterName } = useMemberClusterContext();
@@ -86,16 +86,16 @@ export default function MemberClusterDeployments() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, record: Workload) => (
+      render: (_, _record: Workload) => (
         <Space>
           <Button icon={<EyeOutlined />} title="View details" onClick={async () => {
-              const workloadDetail = await GetResource({
-                memberClusterName: memberClusterName,
-                namespace: record.objectMeta.namespace,
-                name: record.objectMeta.name,
-                kind: record.typeMeta.kind as WorkloadKind,
-              })
-              console.log('workloadDetail', workloadDetail)
+              // const workloadDetail = await GetResource({
+              //   memberClusterName: memberClusterName,
+              //   namespace: record.objectMeta.namespace,
+              //   name: record.objectMeta.name,
+              //   kind: record.typeMeta.kind as WorkloadKind,
+              // })
+              // console.log('workloadDetail', workloadDetail)
           }}>
             View
           </Button>
