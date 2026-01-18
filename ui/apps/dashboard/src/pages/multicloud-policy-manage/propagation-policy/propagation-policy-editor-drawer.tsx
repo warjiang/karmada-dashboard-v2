@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 import i18nInstance from '@/utils/i18n';
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Button, Drawer, Space } from 'antd';
 import { CreatePropagationPolicy } from '@/services/propagationpolicy.ts';
@@ -62,9 +62,6 @@ const PropagationPolicyEditorDrawer: FC<PropagationPolicyEditorDrawerProps> = (
     onUpdate,
   } = props;
   const [content, setContent] = useState<string>(propagationContent || '');
-  useEffect(() => {
-    setContent(propagationContent || '');
-  }, [propagationContent]);
   function handleEditorChange(value: string | undefined) {
     setContent(value || '');
   }
@@ -73,6 +70,10 @@ const PropagationPolicyEditorDrawer: FC<PropagationPolicyEditorDrawerProps> = (
       open={open}
       title={getTitle(mode, name)}
       width={800}
+      afterOpenChange={(isOpen) => {
+        if (!isOpen) return;
+        setContent(propagationContent || '');
+      }}
       styles={{
         body: {
           padding: 0,

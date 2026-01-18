@@ -74,7 +74,6 @@ const ClusterManagePage = () => {
       key: 'clusterName',
       width: 150,
       render: (_, r) => {
-        r.ready;
         return r.objectMeta.name;
       },
     },

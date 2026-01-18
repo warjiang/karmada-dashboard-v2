@@ -31,7 +31,7 @@ export const karmadaClient = axios.create({
   baseURL,
 });
 
-export interface IResponse<Data = {}> {
+export interface IResponse<Data = unknown> {
   code: number;
   message: string;
   data: Data;

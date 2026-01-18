@@ -104,7 +104,7 @@ const LoginPage = () => {
                       ),
                     );
                   }
-                } catch (e) {
+                } catch {
                   await messageApi.error(
                     i18nInstance.t(
                       'b6076a055fe6cc0473e0d313dc58a049',

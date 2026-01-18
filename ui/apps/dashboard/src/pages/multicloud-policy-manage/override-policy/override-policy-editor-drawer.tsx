@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { Button, Drawer, Space } from 'antd';
 import { PutResource } from '@/services/unstructured';
@@ -64,9 +64,6 @@ const OverridePolicyEditorDrawer: FC<OverridePolicyEditorDrawerProps> = (
     onUpdate,
   } = props;
   const [content, setContent] = useState<string>(overrideContent || '');
-  useEffect(() => {
-    setContent(overrideContent || '');
-  }, [overrideContent]);
 
   function handleEditorChange(value: string | undefined) {
     setContent(value || '');
@@ -76,6 +73,10 @@ const OverridePolicyEditorDrawer: FC<OverridePolicyEditorDrawerProps> = (
       open={open}
       title={getTitle(mode, name)}
       width={800}
+      afterOpenChange={(isOpen) => {
+        if (!isOpen) return;
+        setContent(overrideContent || '');
+      }}
       styles={{
         body: {
           padding: 0,
