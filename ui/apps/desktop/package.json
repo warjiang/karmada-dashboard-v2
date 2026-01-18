@@ -76,11 +76,5 @@
     "typescript": "^5.9.3",
     "vite": "^7.2.6",
     "vite-plugin-svgr": "^4.2.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "electron",
-      "esbuild"
-    ]
   }
 }
