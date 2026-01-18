@@ -16,7 +16,7 @@ limitations under the License.
 
 import { useEffect } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/components/auth'
+import { useAuth } from '@desktop/components/DesktopAuthProvider'
 import { Spin } from 'antd'
 
 // Import the original login page component

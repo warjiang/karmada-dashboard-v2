@@ -23,11 +23,12 @@ export default defineConfig({
     },
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer/src'),
+        '@renderer': resolve(__dirname, 'src/renderer/src'),
+        '@desktop': resolve(__dirname, 'src/renderer/src'),
         // Override components to use desktop versions
-        '@/components/auth': resolve('src/renderer/src/components/auth'),
-        '@/layout': resolve('src/renderer/src/layout'),
-        '@/pages/login': resolve('src/renderer/src/pages/login'),
+        '@/components/auth': resolve(__dirname, 'src/renderer/src/components/auth'),
+        '@/layout': resolve(__dirname, 'src/renderer/src/layout'),
+        '@/pages/login': resolve(__dirname, 'src/renderer/src/pages/login'),
         '@': dashboardSrc,
         '@dashboard': dashboardSrc,
         '@locales': resolve(__dirname, '../dashboard/locales')

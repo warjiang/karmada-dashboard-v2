@@ -17,6 +17,12 @@
       "@renderer/*": [
         "src/renderer/src/*"
       ],
+      "@desktop/*": [
+        "src/renderer/src/*"
+      ],
+      "@locales/*": [
+        "../dashboard/locales/*"
+      ],
       "@/*": [
         "../dashboard/src/*"
       ],
