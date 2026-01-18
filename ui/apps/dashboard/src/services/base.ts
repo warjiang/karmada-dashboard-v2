@@ -24,8 +24,18 @@ if (!pathPrefix.startsWith('/')) {
 if (!pathPrefix.endsWith('/')) {
   pathPrefix = pathPrefix + '/';
 }
-export const routerBase = pathPrefix;
-const baseURL: string = _.join([pathPrefix, 'api/v1'], '');
+const baseURL: string = (() => {
+  if (import.meta.env.DEV) {
+    return _.join([pathPrefix, 'api/v1'], '');
+  }
+  const storedEndpoint = localStorage.getItem('api-endpoint');
+  if (storedEndpoint) {
+    // If we have a stored endpoint (Desktop app), use it
+    const trimmedEndpoint = storedEndpoint.endsWith('/') ? storedEndpoint.slice(0, -1) : storedEndpoint;
+    return `${trimmedEndpoint}/api/v1`;
+  }
+  return _.join([pathPrefix, 'api/v1'], '');
+})();
 
 export const karmadaClient = axios.create({
   baseURL,
