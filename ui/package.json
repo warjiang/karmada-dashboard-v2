@@ -9,6 +9,7 @@
     "demos:dev": "turbo dev --filter @karmada/demos",
     "prepare": "cd .. && husky install ui/.husky",
     "dashboard": "pnpm --filter @karmada/dashboard",
+    "desktop": "pnpm --filter @karmada/desktop",
     "chatui": "pnpm --filter @karmada/chatui",
     "terminal": "pnpm --filter @karmada/terminal",
     "translators": "pnpm --filter @karmada/translators"
