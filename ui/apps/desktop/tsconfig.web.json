@@ -4,15 +4,24 @@
     "src/renderer/src/env.d.ts",
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
-    "src/preload/*.d.ts"
+    "src/preload/*.d.ts",
+    "../dashboard/src/**/*",
+    "../dashboard/src/**/*.tsx"
   ],
   "compilerOptions": {
     "composite": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "resolveJsonModule": true,
     "paths": {
       "@renderer/*": [
         "src/renderer/src/*"
+      ],
+      "@/*": [
+        "../dashboard/src/*"
+      ],
+      "@dashboard/*": [
+        "../dashboard/src/*"
       ]
     }
   }
