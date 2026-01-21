@@ -48,6 +48,7 @@ import MemberClusterDeployments from '@/pages/member-cluster/workload/deployment
 import MemberClusterCronJobs from '@/pages/member-cluster/workload/cronjobs';
 import MemberClusterDaemonSets from '@/pages/member-cluster/workload/daemonsets';
 import MemberClusterJobs from '@/pages/member-cluster/workload/jobs';
+import MemberClusterStatefulSets from '@/pages/member-cluster/workload/statefulsets';
 import MemberClusterIngress from '@/pages/member-cluster/service/ingress';
 import MemberClusterServices from '@/pages/member-cluster/service/services';
 import MemberClusterConfigMaps from '@/pages/member-cluster/config/configmaps';
@@ -55,7 +56,7 @@ import MemberClusterPersistentVolumeClaims from '@/pages/member-cluster/config/p
 import MemberClusterSecrets from '@/pages/member-cluster/config/secrets';
 import MemberClusterClusterRoleBindings from '@/pages/member-cluster/cluster/cluster-role-bindings';
 import MemberClusterClusterRoles from '@/pages/member-cluster/cluster/cluster-roles';
-import MemberClusterEvents from '@/pages/member-cluster/cluster/events';
+import MemberClusterEvents from '@/pages/member-cluster/events';
 import MemberClusterNamespaces from '@/pages/member-cluster/cluster/namespaces';
 import MemberClusterNodes from '@/pages/member-cluster/cluster/nodes';
 import MemberClusterPersistentVolumes from '@/pages/member-cluster/cluster/persistent-volumes';
@@ -63,6 +64,7 @@ import MemberClusterRoleBindings from '@/pages/member-cluster/cluster/role-bindi
 import MemberClusterRoles from '@/pages/member-cluster/cluster/roles';
 import MemberClusterServiceAccounts from '@/pages/member-cluster/cluster/service-accounts';
 import Login from '@/pages/login';
+import NotFoundPage from '@/pages/404';
 import { Icons } from '@/components/icons';
 
 export interface IRouteObjectHandle {
@@ -316,6 +318,10 @@ export function getRoutes() {
       element: <Login />,
     },
     {
+      path: '*',
+      element: <NotFoundPage />,
+    },
+    {
           path: '/member-cluster/:memberCluster',
           element: <MemberCluster />,
           handle: {
@@ -371,6 +377,14 @@ export function getRoutes() {
                   handle: {
                     sidebarKey: 'MEMBER-CLUSTER-JOBS',
                     sidebarName: 'Jobs',
+                  },
+                },
+                {
+                  path: 'statefulsets',
+                  element: <MemberClusterStatefulSets />,
+                  handle: {
+                    sidebarKey: 'MEMBER-CLUSTER-STATEFULSETS',
+                    sidebarName: 'StatefulSets',
                   },
                 }
               ]

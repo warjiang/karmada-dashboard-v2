@@ -14,5 +14,65 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-export { default as useNamespace } from './use-namespace';
-export { default as useTagNum } from './use-tag-num';
+// Resource query hooks
+export {
+  useResourceQuery,
+  useResourceDetailQuery,
+  useResourceEventsQuery,
+  useResourceMetricsQuery,
+  useResourceLogsQuery,
+  useRelatedResourcesQuery,
+  useNamespaceOptionsQuery,
+  useAutoRefresh,
+  getResourceQueryKey,
+  createResourcePrefetchFunction,
+  createResourceInvalidateFunction,
+} from './useResourceQuery';
+
+export type {
+  ResourceQueryParams,
+  ResourceDetailParams,
+} from './useResourceQuery';
+
+// Resource mutation hooks
+export {
+  useResourceCreateMutation,
+  useResourceUpdateMutation,
+  useResourceDeleteMutation,
+  useBulkResourceMutation,
+  useWorkloadOperationMutation,
+  useOptimisticResourceMutation,
+  useMutationState,
+  useBatchMutations,
+} from './useResourceMutation';
+
+export type {
+  ResourceMutationParams,
+  ResourceCreateParams,
+  ResourceUpdateParams,
+  ResourceDeleteParams,
+  BulkOperationParams,
+  WorkloadOperationParams,
+} from './useResourceMutation';
+
+// Resource events hooks
+export {
+  useResourceEvents,
+  useClusterEvents,
+  useEventFilter,
+  useEventStats,
+  useEventGrouping,
+  useEventTimeline,
+  useEventExport,
+  useEventStream,
+  EventSeverityColors,
+  EventSeverityIcons,
+  formatEventAge,
+  formatEventMessage,
+} from './useResourceEvents';
+
+export type {
+  EventQueryParams,
+  EventFilter,
+  EventStats,
+} from './useResourceEvents';

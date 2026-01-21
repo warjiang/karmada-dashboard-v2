@@ -65,6 +65,10 @@ const QueryFilter: FC<QueryFilterProps> = (props) => {
                 label: 'Secret',
                 value: ConfigKind.Secret,
               },
+              {
+                label: 'PVC',
+                value: ConfigKind.PersistentVolumeClaim,
+              },
             ]}
           />
         </div>
@@ -76,7 +80,9 @@ const QueryFilter: FC<QueryFilterProps> = (props) => {
         >
           {filter.kind === ConfigKind.ConfigMap
             ? i18nInstance.t('80e2ca37eabd710ead8581de48a54fed', '新增配置')
-            : i18nInstance.t('12f9985489b76f8cd0775f5757b293d4', '新增秘钥')}
+            : filter.kind === ConfigKind.Secret
+            ? i18nInstance.t('12f9985489b76f8cd0775f5757b293d4', '新增秘钥')
+            : i18nInstance.t('Create PVC', 'Create PVC')}
         </Button>
       </div>
       <div className={'flex flex-row space-x-4 mb-4'}>

@@ -68,6 +68,7 @@ const MemberClusterSidebar: FC<MemberClusterSidebarProps> = () => {
       getMenuItem('DaemonSets', 'workload/daemonsets', <ControlOutlined />),
       getMenuItem('Deployments', 'workload/deployments', <ContainerOutlined />),
       getMenuItem('Jobs', 'workload/jobs', <ControlOutlined />),
+      getMenuItem('StatefulSets', 'workload/statefulsets', <DatabaseOutlined />),
     ]),
 
     getMenuItem('Service', 'service-group', <GlobalOutlined />, [

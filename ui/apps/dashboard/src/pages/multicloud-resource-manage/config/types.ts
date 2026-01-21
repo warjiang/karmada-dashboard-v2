@@ -14,16 +14,5 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { ConfigKind } from '@/services/base.ts';
-
-export interface FilterState {
-  kind: ConfigKind;
-  selectedWorkspace: string;
-  searchText: string;
-}
-
-export interface EditorState {
-  show: boolean;
-  mode: 'create' | 'edit' | 'read';
-  content: string;
-}
+// Re-export types from store for backward compatibility
+export type { FilterState, EditorState } from './store';

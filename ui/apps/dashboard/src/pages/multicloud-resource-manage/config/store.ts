@@ -16,7 +16,25 @@ limitations under the License.
 
 import { create } from 'zustand';
 import { ConfigKind } from '@/services/base.ts';
-import { FilterState, EditorState } from './types.ts';
+
+// Enhanced filter state to support all config resource types
+export interface FilterState {
+  kind: ConfigKind;
+  selectedWorkspace: string;
+  searchText: string;
+  // Enhanced filtering options
+  selectedLabels?: string[];
+  selectedStatus?: string[];
+  sortBy?: string[];
+  page?: number;
+  itemsPerPage?: number;
+}
+
+export interface EditorState {
+  show: boolean;
+  mode: 'create' | 'edit' | 'read';
+  content: string;
+}
 
 type State = {
   filter: FilterState;
@@ -29,21 +47,33 @@ type Actions = {
   editConfig: (config: string) => void;
   hideEditor: () => void;
   createConfig: () => void;
+  // Enhanced actions
+  resetFilter: () => void;
+  updatePagination: (page: number, itemsPerPage: number) => void;
 };
 
 export type Store = State & Actions;
 
+// Default filter state with enhanced options
+const defaultFilter: FilterState = {
+  kind: ConfigKind.ConfigMap,
+  selectedWorkspace: '',
+  searchText: '',
+  selectedLabels: [],
+  selectedStatus: [],
+  sortBy: [],
+  page: 1,
+  itemsPerPage: 20,
+};
+
 export const useStore = create<Store>((set) => ({
-  filter: {
-    kind: ConfigKind.ConfigMap,
-    selectedWorkspace: '',
-    searchText: '',
-  },
+  filter: defaultFilter,
   editor: {
     show: false,
     mode: 'create',
     content: '',
   },
+  
   setFilter: (k: Partial<FilterState>) => {
     set((state) => {
       const f = state.filter;
@@ -51,10 +81,27 @@ export const useStore = create<Store>((set) => ({
         filter: {
           ...f,
           ...k,
+          // Reset page when changing filters (except pagination changes)
+          page: k.page !== undefined ? k.page : (k.kind !== undefined || k.searchText !== undefined || k.selectedWorkspace !== undefined) ? 1 : f.page,
         },
       };
     });
   },
+  
+  resetFilter: () => {
+    set({ filter: { ...defaultFilter } });
+  },
+  
+  updatePagination: (page: number, itemsPerPage: number) => {
+    set((state) => ({
+      filter: {
+        ...state.filter,
+        page,
+        itemsPerPage,
+      },
+    }));
+  },
+  
   viewConfig: (config: string) => {
     set({
       editor: {
@@ -64,6 +111,7 @@ export const useStore = create<Store>((set) => ({
       },
     });
   },
+  
   editConfig: (config: string) => {
     set({
       editor: {
@@ -73,6 +121,7 @@ export const useStore = create<Store>((set) => ({
       },
     });
   },
+  
   hideEditor: () => {
     set({
       editor: {
@@ -82,6 +131,7 @@ export const useStore = create<Store>((set) => ({
       },
     });
   },
+  
   createConfig: () => {
     set({
       editor: {

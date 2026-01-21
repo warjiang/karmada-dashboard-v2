@@ -14,78 +14,166 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import i18nInstance from '@/utils/i18n';
-import { FC, useEffect, useState } from 'react';
-import { Form, Modal, Select } from 'antd';
+import React, { FC, useEffect, useState } from 'react';
+import { Form, Modal, Select, notification } from 'antd';
 import Editor from '@monaco-editor/react';
-import { parse } from 'yaml';
+import { parse, stringify } from 'yaml';
 import _ from 'lodash';
-import { CreateResource, PutResource } from '@/services/unstructured';
-import { IResponse, ServiceKind } from '@/services/base.ts';
-export interface NewWorkloadEditorModalProps {
+import { IResponse, ServiceKind } from '@/services/base';
+import { 
+  CreateMemberClusterService, 
+  UpdateMemberClusterService,
+  CreateMemberClusterIngress,
+  UpdateMemberClusterIngress,
+} from '@/services/member-cluster/service';
+import i18nInstance from '@/utils/i18n';
+
+export interface ServiceEditorModalProps {
   mode: 'create' | 'edit' | 'detail';
   open: boolean;
+  memberClusterName: string;
   serviceContent?: string;
   onOk: (ret: IResponse<any>) => Promise<void> | void;
   onCancel: () => Promise<void> | void;
   kind: ServiceKind;
 }
-const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
-  const { mode, open, serviceContent = '', onOk, onCancel, kind } = props;
+
+const ServiceEditorModal: FC<ServiceEditorModalProps> = (props) => {
+  const { 
+    mode, 
+    open, 
+    memberClusterName,
+    serviceContent = '', 
+    onOk, 
+    onCancel, 
+    kind 
+  } = props;
+  
   const [content, setContent] = useState<string>(serviceContent);
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     setContent(serviceContent);
   }, [serviceContent]);
+
   function handleEditorChange(value: string | undefined) {
     setContent(value || '');
   }
+
+  const handleSubmit = async () => {
+    if (!memberClusterName) {
+      notification.error({
+        message: 'Error',
+        description: 'Member cluster name is required',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const yamlObject = parse(content) as Record<string, any>;
+      const resourceKind = _.get(yamlObject, 'kind');
+      const namespace = _.get(yamlObject, 'metadata.namespace', 'default');
+      const name = _.get(yamlObject, 'metadata.name');
+
+      if (!name) {
+        notification.error({
+          message: 'Validation Error',
+          description: 'Resource name is required',
+        });
+        return;
+      }
+
+      let result: IResponse<any>;
+
+      if (mode === 'create') {
+        if (kind === ServiceKind.Service) {
+          result = await CreateMemberClusterService({
+            memberClusterName,
+            namespace,
+            name,
+            content: stringify(yamlObject),
+          });
+        } else {
+          result = await CreateMemberClusterIngress({
+            memberClusterName,
+            namespace,
+            name,
+            content: stringify(yamlObject),
+          });
+        }
+      } else {
+        if (kind === ServiceKind.Service) {
+          result = await UpdateMemberClusterService({
+            memberClusterName,
+            namespace,
+            name,
+            content: stringify(yamlObject),
+          });
+        } else {
+          result = await UpdateMemberClusterIngress({
+            memberClusterName,
+            namespace,
+            name,
+            content: stringify(yamlObject),
+          });
+        }
+      }
+
+      await onOk(result);
+      setContent('');
+    } catch (error) {
+      console.error('Failed to submit service/ingress:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      notification.error({
+        message: `Failed to ${mode} ${kind === ServiceKind.Service ? 'Service' : 'Ingress'}`,
+        description: errorMessage,
+      });
+
+      // Still call onOk with error response for consistency
+      await onOk({
+        code: 500,
+        message: errorMessage,
+        data: null,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    await onCancel();
+    setContent('');
+  };
+
+  const getModalTitle = () => {
+    const resourceType = kind === ServiceKind.Service ? 'Service' : 'Ingress';
+    switch (mode) {
+      case 'create':
+        return i18nInstance.t('c7961c290ec86485d8692f3c09b4075b', `新增${resourceType}`);
+      case 'edit':
+        return i18nInstance.t('cc51f34aa418cb3a596fd6470c677bfe', `编辑${resourceType}`);
+      case 'detail':
+        return i18nInstance.t('ad23e7bbdbe6ed03eebfc27eef7570fa', `查看${resourceType}`);
+      default:
+        return resourceType;
+    }
+  };
+
   return (
     <Modal
-      title={
-        mode === 'create'
-          ? i18nInstance.t('c7961c290ec86485d8692f3c09b4075b', '新增服务')
-          : mode === 'edit'
-            ? i18nInstance.t('cc51f34aa418cb3a596fd6470c677bfe', '编辑服务')
-            : i18nInstance.t('ad23e7bbdbe6ed03eebfc27eef7570fa', '查看服务')
-      }
+      title={getModalTitle()}
       open={open}
       width={1000}
       okText={i18nInstance.t('38cf16f2204ffab8a6e0187070558721', '确定')}
       cancelText={i18nInstance.t('625fb26b4b3340f7872b411f401e754c', '取消')}
       destroyOnClose={true}
-      onOk={async () => {
-        // await onOk()
-        try {
-          const yamlObject = parse(content) as Record<string, string>;
-          const kind = _.get(yamlObject, 'kind');
-          const namespace = _.get(yamlObject, 'metadata.namespace', 'default');
-          const name = _.get(yamlObject, 'metadata.name');
-          if (mode === 'create') {
-            const ret = await CreateResource({
-              kind,
-              name,
-              namespace: namespace,
-              content: yamlObject,
-            });
-            await onOk(ret);
-            setContent('');
-          } else {
-            const ret = await PutResource({
-              kind,
-              name,
-              namespace,
-              content: yamlObject,
-            });
-            await onOk(ret);
-            setContent('');
-          }
-        } catch (e) {
-          console.log('e', e);
-        }
-      }}
-      onCancel={async () => {
-        await onCancel();
-        setContent('');
+      confirmLoading={loading}
+      onOk={handleSubmit}
+      onCancel={handleCancel}
+      okButtonProps={{
+        disabled: mode === 'detail',
       }}
     >
       <Form.Item
@@ -109,6 +197,7 @@ const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
           }}
         />
       </Form.Item>
+      
       <Editor
         height="600px"
         defaultLanguage="yaml"
@@ -117,16 +206,26 @@ const ServiceEditorModal: FC<NewWorkloadEditorModalProps> = (props) => {
         options={{
           theme: 'vs',
           lineNumbers: 'on',
-          fontSize: 15,
+          fontSize: 14,
           readOnly: mode === 'detail',
           minimap: {
             enabled: false,
           },
           wordWrap: 'on',
+          automaticLayout: true,
+          scrollBeyondLastLine: false,
+          folding: true,
+          renderLineHighlight: 'all',
+          selectOnLineNumbers: true,
+          roundedSelection: false,
+          cursorStyle: 'line',
+          formatOnPaste: true,
+          formatOnType: true,
         }}
         onChange={handleEditorChange}
       />
     </Modal>
   );
 };
+
 export default ServiceEditorModal;
