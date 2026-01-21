@@ -24,6 +24,8 @@ if (!pathPrefix.startsWith('/')) {
 if (!pathPrefix.endsWith('/')) {
   pathPrefix = pathPrefix + '/';
 }
+export const routerBase = pathPrefix;
+
 const baseURL: string = (() => {
   if (import.meta.env.DEV) {
     return _.join([pathPrefix, 'api/v1'], '');
