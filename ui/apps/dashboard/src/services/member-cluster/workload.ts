@@ -282,13 +282,9 @@ export async function GetMemberClusterWorkloadDetail(params: {
 }) {
   const { memberClusterName, kind, name, namespace } = params;
   const url = `/clusterapi/${memberClusterName}/api/v1/${kind}/${namespace}/${name}`;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
+  const resp = await karmadaMemberClusterClient.get<{
         errors: string[];
-      } & WorkloadDetail
-    >
-  >(url);
+      } & WorkloadDetail>(url);
   return resp.data;
 }
 
@@ -317,15 +313,13 @@ export async function GetMemberClusterWorkloadEvents(params: {
 }) {
   const { memberClusterName, kind, name, namespace } = params;
   const url = `/clusterapi/${memberClusterName}/api/v1/${kind}/${namespace}/${name}/event`;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
+  const resp = await karmadaMemberClusterClient.get<{
       errors: string[];
       listMeta: {
         totalItems: number;
       };
       events: WorkloadEvent[];
-    }>
-  >(url);
+    }>(url);
   return resp.data;
 }
 

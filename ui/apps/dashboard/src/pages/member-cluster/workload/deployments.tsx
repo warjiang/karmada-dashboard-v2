@@ -1,19 +1,26 @@
-import { Button, Input, Select, Space, Table, TableColumnProps } from 'antd';
+import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
 import { EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
 import { useQuery } from '@tanstack/react-query';
 import { WorkloadKind } from '@/services';
 import { useState } from 'react';
 import {
+    GetMemberClusterWorkloadDetail,
+    GetMemberClusterWorkloadEvents,
     GetMemberClusterWorkloads,
     Workload,
-} from '@/services/member-cluster/workload.ts';
+    WorkloadDetail,
+    WorkloadEvent,
+ } from '@/services/member-cluster/workload.ts';
 import useNamespace from '../../../hooks/use-namespace.ts';
 import i18nInstance from '@/utils/i18n.tsx';
 import dayjs from 'dayjs';
-// import {GetResource} from "@/services/member-cluster/unstructured.ts";
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/unstructured.ts';
 
 export default function MemberClusterDeployments() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
   const [filter, setFilter] = useState<{
     kind: WorkloadKind;
@@ -25,6 +32,14 @@ export default function MemberClusterDeployments() {
     searchText: '',
   });
   const { nsOptions, isNsDataLoading } = useNamespace({});
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
+  const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: [memberClusterName, 'GetWorkloads', JSON.stringify(filter)],
     queryFn: async () => {
@@ -34,10 +49,14 @@ export default function MemberClusterDeployments() {
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
-      console.log('workloads.data', workloads);
       return workloads;
     },
   });
+
+  // placeholder for future conditional fetch logic
+  // const enableViewFetch = useMemo(() => {
+  //   return !!(viewDrawerOpen && viewDetail);
+  // }, [viewDrawerOpen, viewDetail]);
 
   const columns: TableColumnProps<Workload>[] = [
     {
@@ -86,25 +105,64 @@ export default function MemberClusterDeployments() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, _record: Workload) => (
+      render: (_, record: Workload) => (
         <Space>
-          <Button icon={<EyeOutlined />} title="View details" onClick={async () => {
-              // const workloadDetail = await GetResource({
-              //   memberClusterName: memberClusterName,
-              //   namespace: record.objectMeta.namespace,
-              //   name: record.objectMeta.name,
-              //   kind: record.typeMeta.kind as WorkloadKind,
-              // })
-              // console.log('workloadDetail', workloadDetail)
-          }}>
+          <Button
+            icon={<EyeOutlined />}
+            title="View details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterWorkloadDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: record.typeMeta.kind as WorkloadKind,
+                });
+                const eventsRet = await GetMemberClusterWorkloadEvents({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: record.typeMeta.kind as WorkloadKind,
+                });
+                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsRet?.events || []);
+                setViewDrawerOpen(true);
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          <Button icon={<EditOutlined />} title="Edit deployment">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit deployment"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+
+                if (ret.code !== 200) {
+                  void messageApi.error(ret.message || 'Failed to load deployment');
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditModalOpen(true);
+              } catch (e) {
+                void messageApi.error('Failed to load deployment');
+              }
+            }}
+          >
             Edit
           </Button>
           {/* 
           <Button icon={<DeleteOutlined />}  danger title="Delete deployment">
-            Delete
+          Delete
           </Button> */}
         </Space>
       ),
@@ -160,10 +218,136 @@ export default function MemberClusterDeployments() {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} of ${total} deployments`,
           }}
-          scroll={{ y: 'calc(100vh - 400px)' }}
-          loading={isLoading}
-        />
+          // scroll={{ y: 'calc(100vh - 400px)' }}
+           loading={isLoading}
+         />
       </div>
+
+      <Drawer
+        title="Deployment details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
+          setViewEvents([]);
+        }}
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>
+                Images:{' '}
+                <code className="text-xs">
+                  {viewDetail.containerImages?.join(', ')}
+                </code>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Pods</div>
+              <div>
+                Running: {viewDetail.pods?.running} / Desired:{' '}
+                {viewDetail.pods?.desired}
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Events</div>
+              <div className="space-y-1 max-h-64 overflow-auto text-xs">
+                {viewEvents.map((e) => (
+                  <div key={e.objectMeta.uid} className="border-b pb-1">
+                    <div>
+                      [{e.type}] {e.reason}
+                    </div>
+                    <div>{e.message}</div>
+                    <div className="text-gray-500">
+                      {e.sourceComponent} · {e.lastSeen}
+                    </div>
+                  </div>
+                ))}
+                {!viewEvents.length && <div>No events</div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit deployment (YAML)"
+        placement="right"
+        width={900}
+        open={editModalOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditModalOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = (metadata.name || '');
+                  const namespace = (metadata.namespace || '');
+
+                  const ret = await PutResource({
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+                  console.log('update result', ret);
+                  setEditModalOpen(false);
+                  setEditContent('');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }
