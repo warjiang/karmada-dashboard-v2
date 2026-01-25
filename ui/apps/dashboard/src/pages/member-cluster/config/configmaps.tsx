@@ -1,69 +1,79 @@
-import { Table, Tag, Button, Space, Tooltip } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined, DatabaseOutlined } from '@ant-design/icons';
+import {
+  App,
+  Button,
+  Drawer,
+  Input,
+  Select,
+  Space,
+  Table,
+  TableColumnProps,
+  Tag,
+  Tooltip,
+} from 'antd';
+import { EyeOutlined, EditOutlined, DeleteOutlined, FileTextOutlined } from '@ant-design/icons';
+import React from 'react';
 import { useMemberClusterContext } from '../hooks';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  ConfigMap,
+  ConfigMapDetail,
+  GetMemberClusterConfigMapDetail,
+  GetMemberClusterConfigMaps,
+} from '@/services/member-cluster/config.ts';
+import useNamespace from '../../../hooks/use-namespace.ts';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/unstructured.ts';
 
 export default function MemberClusterConfigMaps() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
 
-  // Mock data for demonstration
-  const mockConfigMaps = [
-    {
-      name: 'app-config',
-      namespace: 'default',
-      dataKeys: ['config.yaml', 'app.properties'],
-      age: '7d',
-      size: '2.5 KiB',
-      mountedPods: 3,
-      labels: 'app=webapp,environment=prod'
-    },
-    {
-      name: 'database-config',
-      namespace: 'production',
-      dataKeys: ['database.conf', 'init.sql'],
-      age: '15d',
-      size: '1.8 KiB',
-      mountedPods: 1,
-      labels: 'app=postgres,tier=database'
-    },
-    {
-      name: 'nginx-config',
-      namespace: 'default',
-      dataKeys: ['nginx.conf', 'mime.types', 'ssl.conf'],
-      age: '3d',
-      size: '4.2 KiB',
-      mountedPods: 2,
-      labels: 'app=nginx,component=webserver'
-    },
-    {
-      name: 'logging-config',
-      namespace: 'monitoring',
-      dataKeys: ['fluentd.conf'],
-      age: '10d',
-      size: '0.9 KiB',
-      mountedPods: 5,
-      labels: 'app=fluentd,component=logging'
-    },
-    {
-      name: 'redis-config',
-      namespace: 'cache',
-      dataKeys: ['redis.conf'],
-      age: '20d',
-      size: '1.2 KiB',
-      mountedPods: 1,
-      labels: 'app=redis,tier=cache'
-    },
-    {
-      name: 'env-config',
-      namespace: 'staging',
-      dataKeys: ['env.properties', 'features.json', 'endpoints.yaml'],
-      age: '5d',
-      size: '3.1 KiB',
-      mountedPods: 0,
-      labels: 'environment=staging,type=config'
-    }
-  ];
+  const [filter, setFilter] = useState<{
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    selectedWorkSpace: '',
+    searchText: '',
+  });
 
-  const formatDataKeys = (keys: string[]) => {
+  const { nsOptions, isNsDataLoading } = useNamespace({});
+
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<ConfigMapDetail | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      memberClusterName,
+      'GetMemberClusterConfigMaps',
+      JSON.stringify(filter),
+    ],
+    queryFn: async () => {
+      const ret = await GetMemberClusterConfigMaps({
+        memberClusterName,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      // service returns IResponse<...>
+      return ret;
+    },
+  });
+
+  const formatDataKeys = (cm: ConfigMap) => {
+    const keys = [
+      ...Object.keys(cm.data || {}),
+      ...Object.keys(cm.binaryData || {}),
+    ];
+    if (!keys.length) {
+      return <span className="text-gray-400">-</span>;
+    }
     if (keys.length === 1) {
       return (
         <div className="flex items-center gap-1">
@@ -72,141 +82,324 @@ export default function MemberClusterConfigMaps() {
         </div>
       );
     }
-    
+
     return (
       <Tooltip title={keys.join(', ')}>
         <div className="flex items-center gap-1">
           <FileTextOutlined className="text-blue-500" />
           <code className="text-xs">{keys[0]}</code>
-          {keys.length > 1 && (
-            <Tag  color="blue">+{keys.length - 1}</Tag>
-          )}
+          <Tag color="blue">+{keys.length - 1}</Tag>
         </div>
       </Tooltip>
     );
   };
 
-  const getMountedPodsTag = (pods: number) => {
-    if (pods === 0) {
-      return <Tag color="default">Not mounted</Tag>;
+  const formatLabels = (cm: ConfigMap) => {
+    const labels = cm.objectMeta.labels || {};
+    const entries = Object.entries(labels);
+    if (!entries.length) {
+      return <span className="text-gray-400">-</span>;
     }
-    return <Tag color="green" icon={<DatabaseOutlined />}>{pods} pods</Tag>;
-  };
+    const first = `${entries[0][0]}=${entries[0][1]}`;
+    const remaining = entries.length - 1;
 
-  const formatLabels = (labels: string) => {
-    const labelPairs = labels.split(',');
-    const firstLabel = labelPairs[0];
-    const remainingCount = labelPairs.length - 1;
-    
-    if (labelPairs.length === 1) {
-      return <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>;
+    if (entries.length === 1) {
+      return (
+        <Tag color="geekblue" className="text-xs">
+          {first}
+        </Tag>
+      );
     }
-    
+
+    const full = entries.map(([k, v]) => `${k}=${v}`).join(', ');
+
     return (
-      <Tooltip title={labels}>
+      <Tooltip title={full}>
         <div className="flex items-center gap-1">
-          <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
-          {remainingCount > 0 && (
-            <Tag  color="purple">+{remainingCount}</Tag>
-          )}
+          <Tag color="geekblue" className="text-xs">
+            {first}
+          </Tag>
+          <Tag color="purple">+{remaining}</Tag>
         </div>
       </Tooltip>
     );
   };
 
-  const formatSize = (size: string) => {
-    return <code className="text-xs">{size}</code>;
-  };
-
-  const columns = [
+  const columns: TableColumnProps<ConfigMap>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_: string, record: ConfigMap) => (
+        <strong>{record.objectMeta.name}</strong>
+      ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
-      key: 'namespace'
+      key: 'namespace',
+      render: (_: string, record: ConfigMap) => record.objectMeta.namespace,
     },
     {
       title: 'Data Keys',
       dataIndex: 'dataKeys',
       key: 'dataKeys',
-      render: (keys: string[]) => formatDataKeys(keys)
-    },
-    {
-      title: 'Size',
-      dataIndex: 'size',
-      key: 'size',
-      render: (size: string) => formatSize(size)
-    },
-    {
-      title: 'Mounted',
-      dataIndex: 'mountedPods',
-      key: 'mountedPods',
-      render: (pods: number) => getMountedPodsTag(pods)
+      render: (_: unknown, record: ConfigMap) => formatDataKeys(record),
     },
     {
       title: 'Labels',
       dataIndex: 'labels',
       key: 'labels',
-      render: (labels: string) => formatLabels(labels)
+      render: (_: unknown, record: ConfigMap) => formatLabels(record),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
+      key: 'age',
+      render: (_: string, record: ConfigMap) => {
+        const create = dayjs(record.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
+      render: (_: unknown, record: ConfigMap) => (
         <Space>
-          <Button icon={<EyeOutlined />}  title="View ConfigMap data">
+          <Button
+            icon={<EyeOutlined />}
+            title="View ConfigMap data"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterConfigMapDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                });
+
+                setViewDetail(detailResp as ConfigMapDetail);
+                setViewDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load ConfigMap');
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          <Button icon={<EditOutlined />}  title="Edit ConfigMap">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit ConfigMap"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+
+                if (ret.code !== 200) {
+                  void messageApi.error(
+                    ret.message || 'Failed to load ConfigMap',
+                  );
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load ConfigMap');
+              }
+            }}
+          >
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />}  danger title="Delete ConfigMap">
+          <Button
+            icon={<DeleteOutlined />}
+            danger
+            title="Delete ConfigMap"
+            disabled
+          >
             Delete
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
-
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        ConfigMaps in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes ConfigMaps in the "{memberClusterName}" cluster. ConfigMaps store non-confidential configuration data.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className={"flex flex-row space-x-4 mb-4"}>
+        <h3 className={"leading-[32px]"}>Namespace:</h3>
+        <Select
+          options={nsOptions}
+          className={"min-w-[200px]"}
+          value={filter.selectedWorkSpace}
+          loading={isNsDataLoading}
+          showSearch
+          allowClear
+          onChange={(v) => {
+            setFilter({
+              ...filter,
+              selectedWorkSpace: v,
+            });
+          }}
+        />
+        <Input.Search
+          placeholder="Search by name"
+          className={"w-[300px]"}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockConfigMaps}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} configmaps`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          columns={columns}
+          dataSource={data?.items || []}
+          rowKey={(record) =>
+            `${record.objectMeta.namespace}-${record.objectMeta.name}`
+          }
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} configmaps`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="ConfigMap details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
         }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific ConfigMaps.
-          <br />
-          <strong>Usage:</strong> ConfigMaps can be mounted as volumes or exposed as environment variables in pods.
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>
+                Keys:{' '}
+                <code className="text-xs">
+                  {(viewDetail.keys || []).join(', ')}
+                </code>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Data</div>
+              <div className="space-y-1 text-xs">
+                {Object.entries(viewDetail.data || {}).map(([k, v]) => (
+                  <div key={k} className="border-b pb-1">
+                    <div className="font-semibold">{k}</div>
+                    <pre className="whitespace-pre-wrap break-all">{v}</pre>
+                  </div>
+                ))}
+                {!Object.keys(viewDetail.data || {}).length && (
+                  <div>No data</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit ConfigMap (YAML)"
+        placement="right"
+        width={900}
+        open={editDrawerOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditDrawerOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = metadata.name || '';
+                  const namespace = metadata.namespace || '';
+
+                  const ret = await PutResource({
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(
+                      ret.message || 'Failed to update ConfigMap',
+                    );
+                    return;
+                  }
+
+                  setEditDrawerOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update ConfigMap');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }

@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -71,15 +71,13 @@ export async function GetMemberClusterConfigMaps(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
-    IResponse<{
+  const resp = await karmadaMemberClusterClient.get<{
       errors: string[];
       listMeta: {
         totalItems: number;
       };
-      configMaps: ConfigMap[];
-    }>
-  >(url, {
+      items: ConfigMap[];
+    }>(url, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
@@ -91,13 +89,9 @@ export async function GetMemberClusterConfigMapDetail(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
-    IResponse<
-      {
+  const resp = await karmadaMemberClusterClient.get<{
         errors: string[];
-      } & ConfigMapDetail
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/configmap/${namespace}/${name}`);
+      } & ConfigMapDetail>(`/clusterapi/${memberClusterName}/api/v1/configmap/${namespace}/${name}`);
   return resp.data;
 }
 
@@ -119,7 +113,7 @@ export async function GetMemberClusterSecrets(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -139,7 +133,7 @@ export async function GetMemberClusterSecretDetail(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -154,7 +148,7 @@ export async function CreateMemberClusterImagePullSecret(params: {
   spec: ImagePullSecretSpec;
 }) {
   const { memberClusterName, spec } = params;
-  const resp = await karmadaClient.post<IResponse<Secret>>(
+  const resp = await karmadaMemberClusterClient.post<IResponse<Secret>>(
     `/clusterapi/${memberClusterName}/api/v1/secret`,
     spec,
   );
