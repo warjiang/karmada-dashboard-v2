@@ -1,215 +1,354 @@
-import { Table, Tag, Button, Space, Progress, Tooltip } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined, NodeExpandOutlined } from '@ant-design/icons';
+import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
+import { EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
+import { useQuery } from '@tanstack/react-query';
+import { WorkloadKind } from '@/services';
+import { useState } from 'react';
+import {
+  GetMemberClusterWorkloadDetail,
+  GetMemberClusterWorkloadEvents,
+  GetMemberClusterWorkloads,
+  Workload,
+  WorkloadDetail,
+  WorkloadEvent,
+} from '@/services/member-cluster/workload.ts';
+import useNamespace from '../../../hooks/use-namespace.ts';
+import i18nInstance from '@/utils/i18n.tsx';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/unstructured.ts';
 
 export default function MemberClusterDaemonSets() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
+  const [filter, setFilter] = useState<{
+    kind: WorkloadKind;
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    kind: WorkloadKind.Daemonset,
+    selectedWorkSpace: '',
+    searchText: '',
+  });
+  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
+  const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);
+  const [viewLoading, setViewLoading] = useState(false);
 
-  // Mock data for demonstration
-  const mockDaemonSets = [
-    {
-      name: 'fluent-bit',
-      namespace: 'kube-system',
-      desired: 3,
-      current: 3,
-      ready: 3,
-      upToDate: 3,
-      available: 3,
-      nodeSelector: 'kubernetes.io/os=linux',
-      age: '15d',
-      images: 'fluent/fluent-bit:1.9.3',
-      status: 'Ready'
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [memberClusterName, 'GetDaemonSets', JSON.stringify(filter)],
+    queryFn: async () => {
+      const workloads = await GetMemberClusterWorkloads({
+        memberClusterName,
+        kind: filter.kind,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      return workloads;
     },
-    {
-      name: 'node-exporter',
-      namespace: 'monitoring',
-      desired: 3,
-      current: 3,
-      ready: 2,
-      upToDate: 3,
-      available: 2,
-      nodeSelector: 'beta.kubernetes.io/arch=amd64',
-      age: '8d',
-      images: 'prom/node-exporter:v1.3.1',
-      status: 'Updating'
-    },
-    {
-      name: 'kube-proxy',
-      namespace: 'kube-system',
-      desired: 3,
-      current: 3,
-      ready: 3,
-      upToDate: 3,
-      available: 3,
-      nodeSelector: 'kubernetes.io/os=linux',
-      age: '30d',
-      images: 'k8s.gcr.io/kube-proxy:v1.25.0',
-      status: 'Ready'
-    },
-    {
-      name: 'weave-net',
-      namespace: 'kube-system',
-      desired: 3,
-      current: 2,
-      ready: 2,
-      upToDate: 2,
-      available: 2,
-      nodeSelector: '',
-      age: '25d',
-      images: 'weaveworks/weave-kube:2.8.1',
-      status: 'Degraded'
-    }
-  ];
+  });
 
-  const getStatusTag = (status: string) => {
-    const colorMap: Record<string, string> = {
-      'Ready': 'success',
-      'Updating': 'processing',
-      'Degraded': 'error',
-      'Failed': 'error'
-    };
-    return <Tag color={colorMap[status] || 'default'}>{status}</Tag>;
-  };
-
-  const getReadinessProgress = (ready: number, desired: number) => {
-    const percent = desired > 0 ? Math.round((ready / desired) * 100) : 0;
-    const status = percent === 100 ? 'success' : percent > 80 ? 'active' : 'exception';
-    
-    return (
-      <div className="flex items-center gap-2">
-        <Progress
-          percent={percent}
-         
-          status={status}
-          showInfo={false}
-          style={{ width: 60 }}
-        />
-        <span className="text-xs">{ready}/{desired}</span>
-      </div>
-    );
-  };
-
-  const columns = [
+  const columns: TableColumnProps<Workload>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_name: string, record: Workload) => (
+        <>{record.objectMeta.name}</>
+      ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
-      key: 'namespace'
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string) => getStatusTag(status)
-    },
-    {
-      title: 'Desired',
-      dataIndex: 'desired',
-      key: 'desired'
-    },
-    {
-      title: 'Current',
-      dataIndex: 'current',
-      key: 'current'
+      key: 'namespace',
+      render: (_name: string, record: Workload) => (
+        <>{record.objectMeta.namespace}</>
+      ),
     },
     {
       title: 'Ready',
-      dataIndex: 'ready',
-      key: 'ready',
-      render: (ready: number, record: any) => getReadinessProgress(ready, record.desired)
-    },
-    {
-      title: 'Up-to-date',
-      dataIndex: 'upToDate',
-      key: 'upToDate'
-    },
-    {
-      title: 'Available',
-      dataIndex: 'available',
-      key: 'available'
-    },
-    {
-      title: 'Node Selector',
-      dataIndex: 'nodeSelector',
-      key: 'nodeSelector',
-      render: (nodeSelector: string) => (
-        nodeSelector ? (
-          <Tooltip title={nodeSelector}>
-            <Tag icon={<NodeExpandOutlined />} className="text-xs">
-              {nodeSelector.length > 15 ? `${nodeSelector.substring(0, 15)}...` : nodeSelector}
-            </Tag>
-          </Tooltip>
-        ) : (
-          <span className="text-gray-400">None</span>
-        )
-      )
+      dataIndex: 'replicas',
+      key: 'replicas',
+      render: (_status: string, record: Workload) => (
+        <>
+          {record.pods?.running}/{record.pods?.desired}
+        </>
+      ),
     },
     {
       title: 'Images',
       dataIndex: 'images',
       key: 'images',
-      render: (images: string) => (
-        <Tooltip title={images}>
-          <code className="text-xs">{images.length > 25 ? `${images.substring(0, 25)}...` : images}</code>
-        </Tooltip>
-      )
+      render: (_, record: Workload) => (
+        <code className="text-xs">{record.containerImages?.[0]}</code>
+      ),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
+      key: 'age',
+      render: (_, r) => {
+        const create = dayjs(r.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
+      render: (_, record: Workload) => (
         <Space>
-          <Button icon={<EyeOutlined />}  title="View details">
+          <Button
+            icon={<EyeOutlined />}
+            title="View details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterWorkloadDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: WorkloadKind.Daemonset,
+                });
+                const eventsResp = await GetMemberClusterWorkloadEvents({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: WorkloadKind.Daemonset,
+                });
+                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsResp.events || []);
+                setViewDrawerOpen(true);
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          <Button icon={<EditOutlined />}  title="Edit DaemonSet">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit DaemonSet"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+
+                if (ret.code !== 200) {
+                  void messageApi.error(ret.message || 'Failed to load DaemonSet');
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditModalOpen(true);
+              } catch {
+                void messageApi.error('Failed to load DaemonSet');
+              }
+            }}
+          >
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />}  danger title="Delete DaemonSet">
-            Delete
-          </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        DaemonSets in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes DaemonSets in the "{memberClusterName}" cluster. DaemonSets ensure that pods run on all (or selected) nodes.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className={'flex flex-row space-x-4 mb-4'}>
+        <h3 className={'leading-[32px]'}>
+          {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
+        </h3>
+        <Select
+          options={nsOptions}
+          className={'min-w-[200px]'}
+          value={filter.selectedWorkSpace}
+          loading={isNsDataLoading}
+          showSearch
+          allowClear
+          onChange={(v) => {
+            setFilter({
+              ...filter,
+              selectedWorkSpace: v,
+            });
+          }}
+        />
+        <Input.Search
+          placeholder={i18nInstance.t(
+            'cfaff3e369b9bd51504feb59bf0972a0',
+            '按命名空间搜索',
+          )}
+          className={'w-[300px]'}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockDaemonSets}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} daemonsets`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          rowKey={(record) =>
+            `${record.objectMeta.namespace}-${record.objectMeta.name}`
+          }
+          columns={columns}
+          dataSource={data?.daemonSets || []}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} daemonsets`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="DaemonSet details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
+          setViewEvents([]);
         }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific DaemonSets.
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>
+                Images:{' '}
+                <code className="text-xs">
+                  {viewDetail.containerImages?.join(', ')}
+                </code>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Pods</div>
+              <div>
+                Running: {viewDetail.pods?.running} / Desired:{' '}
+                {viewDetail.pods?.desired}
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Events</div>
+              <div className="space-y-1 max-h-64 overflow-auto text-xs">
+                {viewEvents.map((e) => (
+                  <div key={e.objectMeta.uid} className="border-b pb-1">
+                    <div>
+                      [{e.type}] {e.reason}
+                    </div>
+                    <div>{e.message}</div>
+                    <div className="text-gray-500">
+                      {e.sourceComponent} · {e.lastSeen}
+                    </div>
+                  </div>
+                ))}
+                {!viewEvents.length && <div>No events</div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit DaemonSet (YAML)"
+        placement="right"
+        width={900}
+        open={editModalOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditModalOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = metadata.name || '';
+                  const namespace = metadata.namespace || '';
+
+                  const ret = await PutResource({
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(
+                      ret.message || 'Failed to update DaemonSet',
+                    );
+                    return;
+                  }
+
+                  setEditModalOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update DaemonSet');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }

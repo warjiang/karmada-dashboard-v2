@@ -1,242 +1,352 @@
-import { Table, Tag, Button, Space, Progress, Tooltip } from 'antd';
-import { EyeOutlined, DeleteOutlined, RedoOutlined, ClockCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
+import { EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
+import { useQuery } from '@tanstack/react-query';
+import { WorkloadKind } from '@/services';
+import { useState } from 'react';
+import {
+  GetMemberClusterWorkloadDetail,
+  GetMemberClusterWorkloadEvents,
+  GetMemberClusterJobs,
+  Workload,
+  WorkloadDetail,
+  WorkloadEvent,
+} from '@/services/member-cluster/workload.ts';
+import useNamespace from '../../../hooks/use-namespace.ts';
+import i18nInstance from '@/utils/i18n.tsx';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/unstructured.ts';
 
 export default function MemberClusterJobs() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
+  const [filter, setFilter] = useState<{
+    kind: WorkloadKind;
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    kind: WorkloadKind.Job,
+    selectedWorkSpace: '',
+    searchText: '',
+  });
+  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
+  const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);
+  const [viewLoading, setViewLoading] = useState(false);
 
-  // Mock data for demonstration
-  const mockJobs = [
-    {
-      name: 'data-migration-20231201',
-      namespace: 'default',
-      completions: 1,
-      duration: '2m15s',
-      age: '3h',
-      image: 'migrate-tool:v1.2',
-      status: 'Complete',
-      startTime: '2023-12-01T10:30:00Z',
-      completionTime: '2023-12-01T10:32:15Z',
-      succeeded: 1,
-      failed: 0,
-      active: 0
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [memberClusterName, 'GetJobs', JSON.stringify(filter)],
+    queryFn: async () => {
+      const workloads = await GetMemberClusterJobs({
+        memberClusterName,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      return workloads;
     },
-    {
-      name: 'backup-database',
-      namespace: 'production',
-      completions: 1,
-      duration: '15m32s',
-      age: '1h',
-      image: 'postgres:14-alpine',
-      status: 'Complete',
-      startTime: '2023-12-01T11:45:00Z',
-      completionTime: '2023-12-01T12:00:32Z',
-      succeeded: 1,
-      failed: 0,
-      active: 0
-    },
-    {
-      name: 'process-logs',
-      namespace: 'analytics',
-      completions: 3,
-      duration: '5m',
-      age: '30m',
-      image: 'log-processor:latest',
-      status: 'Running',
-      startTime: '2023-12-01T12:30:00Z',
-      completionTime: null,
-      succeeded: 2,
-      failed: 0,
-      active: 1
-    },
-    {
-      name: 'cleanup-old-files',
-      namespace: 'system',
-      completions: 1,
-      duration: '1m45s',
-      age: '2h',
-      image: 'busybox:1.35',
-      status: 'Failed',
-      startTime: '2023-12-01T11:30:00Z',
-      completionTime: '2023-12-01T11:31:45Z',
-      succeeded: 0,
-      failed: 1,
-      active: 0
-    },
-    {
-      name: 'generate-reports',
-      namespace: 'reporting',
-      completions: 5,
-      duration: '8m12s',
-      age: '25m',
-      image: 'report-generator:v2.0',
-      status: 'Running',
-      startTime: '2023-12-01T12:35:00Z',
-      completionTime: null,
-      succeeded: 3,
-      failed: 1,
-      active: 1
-    }
-  ];
+  });
 
-  const getStatusTag = (status: string, succeeded: number, failed: number, active: number) => {
-    let icon, color;
-    
-    switch (status) {
-      case 'Complete':
-        icon = <CheckCircleOutlined />;
-        color = 'success';
-        break;
-      case 'Running':
-        icon = <ClockCircleOutlined />;
-        color = 'processing';
-        break;
-      case 'Failed':
-        icon = <ExclamationCircleOutlined />;
-        color = 'error';
-        break;
-      default:
-        icon = null;
-        color = 'default';
-    }
-
-    return (
-      <div className="flex flex-col gap-1">
-        <Tag color={color} icon={icon}>
-          {status}
-        </Tag>
-        <div className="text-xs text-gray-500">
-          S:{succeeded} F:{failed} A:{active}
-        </div>
-      </div>
-    );
-  };
-
-  const getCompletionProgress = (succeeded: number, failed: number, completions: number) => {
-    const total = succeeded + failed;
-    const percent = completions > 0 ? Math.round((total / completions) * 100) : 0;
-    const status = failed > 0 ? 'exception' : total === completions ? 'success' : 'active';
-    
-    return (
-      <div className="flex items-center gap-2">
-        <Progress
-          percent={percent}
-         
-          status={status}
-          showInfo={false}
-          style={{ width: 60 }}
-        />
-        <span className="text-xs">{total}/{completions}</span>
-      </div>
-    );
-  };
-
-  const formatDuration = (duration: string) => {
-    return <code className="text-xs">{duration}</code>;
-  };
-
-  const columns = [
+  const columns: TableColumnProps<Workload>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_name: string, record: Workload) => (
+        <>{record.objectMeta.name}</>
+      ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
-      key: 'namespace'
+      key: 'namespace',
+      render: (_name: string, record: Workload) => (
+        <>{record.objectMeta.namespace}</>
+      ),
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status: string, record: any) => 
-        getStatusTag(status, record.succeeded, record.failed, record.active)
+      title: 'Ready',
+      dataIndex: 'replicas',
+      key: 'replicas',
+      render: (_status: string, record: Workload) => (
+        <>
+          {record.pods?.running}/{record.pods?.desired}
+        </>
+      ),
     },
     {
-      title: 'Completions',
-      key: 'completions',
-      render: (record: any) => 
-        getCompletionProgress(record.succeeded, record.failed, record.completions)
-    },
-    {
-      title: 'Duration',
-      dataIndex: 'duration',
-      key: 'duration',
-      render: (duration: string) => formatDuration(duration)
+      title: 'Images',
+      dataIndex: 'images',
+      key: 'images',
+      render: (_, record: Workload) => (
+        <code className="text-xs">{record.containerImages?.[0]}</code>
+      ),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
-    },
-    {
-      title: 'Image',
-      dataIndex: 'image',
-      key: 'image',
-      render: (image: string) => (
-        <Tooltip title={image}>
-          <code className="text-xs">{image.length > 20 ? `${image.substring(0, 20)}...` : image}</code>
-        </Tooltip>
-      )
+      key: 'age',
+      render: (_, r) => {
+        const create = dayjs(r.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: any) => (
+      render: (_, record: Workload) => (
         <Space>
-          <Button icon={<EyeOutlined />}  title="View details">
+          <Button
+            icon={<EyeOutlined />}
+            title="View details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterWorkloadDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: WorkloadKind.Job,
+                });
+                const eventsResp = await GetMemberClusterWorkloadEvents({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: WorkloadKind.Job,
+                });
+
+                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsResp.events || []);
+                setViewDrawerOpen(true);
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          {record.status === 'Complete' || record.status === 'Failed' ? (
-            <Button icon={<RedoOutlined />}  title="Create job from template">
-              Recreate
-            </Button>
-          ) : null}
-          <Button 
-            icon={<DeleteOutlined />} 
-             
-            danger 
-            title="Delete job"
-            disabled={record.status === 'Running'}
+          <Button
+            icon={<EditOutlined />}
+            title="Edit Job"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+
+                if (ret.code !== 200) {
+                  void messageApi.error(ret.message || 'Failed to load Job');
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditModalOpen(true);
+              } catch {
+                void messageApi.error('Failed to load Job');
+              }
+            }}
           >
-            Delete
+            Edit
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        Jobs in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes Jobs in the "{memberClusterName}" cluster. Jobs run pods to completion for batch workloads.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className={'flex flex-row space-x-4 mb-4'}>
+        <h3 className={'leading-[32px]'}>
+          {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
+        </h3>
+        <Select
+          options={nsOptions}
+          className={'min-w-[200px]'}
+          value={filter.selectedWorkSpace}
+          loading={isNsDataLoading}
+          showSearch
+          allowClear
+          onChange={(v) => {
+            setFilter({
+              ...filter,
+              selectedWorkSpace: v,
+            });
+          }}
+        />
+        <Input.Search
+          placeholder={i18nInstance.t(
+            'cfaff3e369b9bd51504feb59bf0972a0',
+            '按命名空间搜索',
+          )}
+          className={'w-[300px]'}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockJobs}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} jobs`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          rowKey={(record) =>
+            `${record.objectMeta.namespace}-${record.objectMeta.name}`
+          }
+          columns={columns}
+          dataSource={data?.data?.jobs || []}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} jobs`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="Job details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
+          setViewEvents([]);
         }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific Jobs.
-          <br />
-          <strong>Legend:</strong> S=Succeeded, F=Failed, A=Active pods
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>
+                Images:{' '}
+                <code className="text-xs">
+                  {viewDetail.containerImages?.join(', ')}
+                </code>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Pods</div>
+              <div>
+                Running: {viewDetail.pods?.running} / Desired:{' '}
+                {viewDetail.pods?.desired}
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Events</div>
+              <div className="space-y-1 max-h-64 overflow-auto text-xs">
+                {viewEvents.map((e) => (
+                  <div key={e.objectMeta.uid} className="border-b pb-1">
+                    <div>
+                      [{e.type}] {e.reason}
+                    </div>
+                    <div>{e.message}</div>
+                    <div className="text-gray-500">
+                      {e.sourceComponent} · {e.lastSeen}
+                    </div>
+                  </div>
+                ))}
+                {!viewEvents.length && <div>No events</div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit Job (YAML)"
+        placement="right"
+        width={900}
+        open={editModalOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditModalOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = metadata.name || '';
+                  const namespace = metadata.namespace || '';
+
+                  const ret = await PutResource({
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(ret.message || 'Failed to update Job');
+                    return;
+                  }
+
+                  setEditModalOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update Job');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }

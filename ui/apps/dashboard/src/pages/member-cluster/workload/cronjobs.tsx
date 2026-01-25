@@ -1,172 +1,354 @@
-import { Table, Tag, Button, Space, Tooltip } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
+import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
+import { EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
+import { useQuery } from '@tanstack/react-query';
+import { WorkloadKind } from '@/services';
+import { useState } from 'react';
+import {
+  GetMemberClusterWorkloadDetail,
+  GetMemberClusterWorkloadEvents,
+  GetMemberClusterCronJobs,
+  Workload,
+  WorkloadDetail,
+  WorkloadEvent,
+} from '@/services/member-cluster/workload.ts';
+import useNamespace from '../../../hooks/use-namespace.ts';
+import i18nInstance from '@/utils/i18n.tsx';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/unstructured.ts';
 
 export default function MemberClusterCronJobs() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
+  const [filter, setFilter] = useState<{
+    kind: WorkloadKind;
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    kind: WorkloadKind.Cronjob,
+    selectedWorkSpace: '',
+    searchText: '',
+  });
+  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
+  const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);
+  const [viewLoading, setViewLoading] = useState(false);
 
-  // Mock data for demonstration
-  const mockCronJobs = [
-    {
-      name: 'backup-job',
-      namespace: 'default',
-      schedule: '0 2 * * *',
-      suspend: false,
-      active: 1,
-      lastSchedule: '2h',
-      age: '5d',
-      image: 'backup-tool:v1.0'
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [memberClusterName, 'GetCronJobs', JSON.stringify(filter)],
+    queryFn: async () => {
+      const workloads = await GetMemberClusterCronJobs({
+        memberClusterName,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      return workloads;
     },
-    {
-      name: 'cleanup-logs',
-      namespace: 'system',
-      schedule: '0 */6 * * *',
-      suspend: false,
-      active: 0,
-      lastSchedule: '4h',
-      age: '12d',
-      image: 'busybox:latest'
-    },
-    {
-      name: 'data-sync',
-      namespace: 'production',
-      schedule: '*/15 * * * *',
-      suspend: true,
-      active: 0,
-      lastSchedule: 'Never',
-      age: '3d',
-      image: 'sync-service:v2.1'
-    },
-    {
-      name: 'health-check',
-      namespace: 'monitoring',
-      schedule: '*/5 * * * *',
-      suspend: false,
-      active: 2,
-      lastSchedule: '3m',
-      age: '7d',
-      image: 'health-checker:latest'
-    }
-  ];
+  });
 
-  const getSuspendTag = (suspend: boolean) => {
-    return (
-      <Tag color={suspend ? 'red' : 'green'} icon={suspend ? <PauseCircleOutlined /> : <PlayCircleOutlined />}>
-        {suspend ? 'Suspended' : 'Active'}
-      </Tag>
-    );
-  };
-
-  const getActiveTag = (active: number) => {
-    const color = active > 0 ? 'processing' : 'default';
-    return <Tag color={color}>{active}</Tag>;
-  };
-
-  const columns = [
+  const columns: TableColumnProps<Workload>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_name: string, record: Workload) => (
+        <>{record.objectMeta.name}</>
+      ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
-      key: 'namespace'
+      key: 'namespace',
+      render: (_name: string, record: Workload) => (
+        <>{record.objectMeta.namespace}</>
+      ),
     },
     {
-      title: 'Schedule',
-      dataIndex: 'schedule',
-      key: 'schedule',
-      render: (schedule: string) => <code className="text-xs">{schedule}</code>
+      title: 'Ready',
+      dataIndex: 'replicas',
+      key: 'replicas',
+      render: (_status: string, record: Workload) => (
+        <>
+          {record.pods?.running}/{record.pods?.desired}
+        </>
+      ),
     },
     {
-      title: 'Status',
-      dataIndex: 'suspend',
-      key: 'suspend',
-      render: (suspend: boolean) => getSuspendTag(suspend)
-    },
-    {
-      title: 'Active Jobs',
-      dataIndex: 'active',
-      key: 'active',
-      render: (active: number) => getActiveTag(active)
-    },
-    {
-      title: 'Last Schedule',
-      dataIndex: 'lastSchedule',
-      key: 'lastSchedule'
-    },
-    {
-      title: 'Image',
-      dataIndex: 'image',
-      key: 'image',
-      render: (image: string) => (
-        <Tooltip title={image}>
-          <code className="text-xs">{image.length > 20 ? `${image.substring(0, 20)}...` : image}</code>
-        </Tooltip>
-      )
+      title: 'Images',
+      dataIndex: 'images',
+      key: 'images',
+      render: (_, record: Workload) => (
+        <code className="text-xs">{record.containerImages?.[0]}</code>
+      ),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
+      key: 'age',
+      render: (_, r) => {
+        const create = dayjs(r.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: any) => (
+      render: (_, record: Workload) => (
         <Space>
-          <Button icon={<EyeOutlined />}  title="View details">
+          <Button
+            icon={<EyeOutlined />}
+            title="View details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterWorkloadDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: WorkloadKind.Cronjob,
+                });
+                const eventsResp = await GetMemberClusterWorkloadEvents({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                  kind: WorkloadKind.Cronjob,
+                });
+
+                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsResp.events || []);
+                setViewDrawerOpen(true);
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          {record.suspend ? (
-            <Button icon={<PlayCircleOutlined />}  title="Resume CronJob" type="primary">
-              Resume
-            </Button>
-          ) : (
-            <Button icon={<PauseCircleOutlined />}  title="Suspend CronJob">
-              Suspend
-            </Button>
-          )}
-          <Button icon={<EditOutlined />}  title="Edit CronJob">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit CronJob"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+
+                if (ret.code !== 200) {
+                  void messageApi.error(ret.message || 'Failed to load CronJob');
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditModalOpen(true);
+              } catch {
+                void messageApi.error('Failed to load CronJob');
+              }
+            }}
+          >
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />}  danger title="Delete CronJob">
-            Delete
-          </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        CronJobs in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes CronJobs in the "{memberClusterName}" cluster.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className={'flex flex-row space-x-4 mb-4'}>
+        <h3 className={'leading-[32px]'}>
+          {i18nInstance.t('280c56077360c204e536eb770495bc5f', '命名空间')}：
+        </h3>
+        <Select
+          options={nsOptions}
+          className={'min-w-[200px]'}
+          value={filter.selectedWorkSpace}
+          loading={isNsDataLoading}
+          showSearch
+          allowClear
+          onChange={(v) => {
+            setFilter({
+              ...filter,
+              selectedWorkSpace: v,
+            });
+          }}
+        />
+        <Input.Search
+          placeholder={i18nInstance.t(
+            'cfaff3e369b9bd51504feb59bf0972a0',
+            '按命名空间搜索',
+          )}
+          className={'w-[300px]'}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockCronJobs}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} cronjobs`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          rowKey={(record) =>
+            `${record.objectMeta.namespace}-${record.objectMeta.name}`
+          }
+          columns={columns}
+          dataSource={data?.data?.cronJobs || []}
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} cronjobs`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="CronJob details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
+          setViewEvents([]);
         }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific CronJobs.
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>
+                Images:{' '}
+                <code className="text-xs">
+                  {viewDetail.containerImages?.join(', ')}
+                </code>
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Pods</div>
+              <div>
+                Running: {viewDetail.pods?.running} / Desired:{' '}
+                {viewDetail.pods?.desired}
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Events</div>
+              <div className="space-y-1 max-h-64 overflow-auto text-xs">
+                {viewEvents.map((e) => (
+                  <div key={e.objectMeta.uid} className="border-b pb-1">
+                    <div>
+                      [{e.type}] {e.reason}
+                    </div>
+                    <div>{e.message}</div>
+                    <div className="text-gray-500">
+                      {e.sourceComponent} · {e.lastSeen}
+                    </div>
+                  </div>
+                ))}
+                {!viewEvents.length && <div>No events</div>}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit CronJob (YAML)"
+        placement="right"
+        width={900}
+        open={editModalOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditModalOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = metadata.name || '';
+                  const namespace = metadata.namespace || '';
+
+                  const ret = await PutResource({
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(
+                      ret.message || 'Failed to update CronJob',
+                    );
+                    return;
+                  }
+
+                  setEditModalOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update CronJob');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }
