@@ -244,9 +244,8 @@ export default function MemberClusterSecrets() {
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
-                console.log(ret)
-                if (ret.code !== 200) {
-                  void messageApi.error(ret.message || 'Failed to load Secret');
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load Secret');
                   return;
                 }
 

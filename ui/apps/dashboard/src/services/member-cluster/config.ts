@@ -17,7 +17,6 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
   karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
@@ -113,15 +112,12 @@ export async function GetMemberClusterSecrets(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
+  const resp = await karmadaMemberClusterClient.get<{
       errors: string[];
       listMeta: {
         totalItems: number;
       };
-      secrets: Secret[];
-    }>
-  >(url, {
+      secrets: Secret[]}>(url, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;

@@ -18,7 +18,11 @@ import { karmadaMemberClusterClient } from '../base';
 
 export async function GetResource(params: UnstructuredParams) {
   const url = generateUrlForUnstructuredParams(params);
-  const resp = await karmadaMemberClusterClient.get<any>(url);
+  const resp = await karmadaMemberClusterClient.get<{
+    data: any;
+    code: number;
+    message: string;
+  }>(url);
   return resp;
 }
 
