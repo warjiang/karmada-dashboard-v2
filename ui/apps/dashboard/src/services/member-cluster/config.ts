@@ -133,14 +133,10 @@ export async function GetMemberClusterSecretDetail(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
+  const resp = await karmadaMemberClusterClient.get<{
         errors: string[];
-      } & SecretDetail
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/secret/${namespace}/${name}`);
-  return resp.data;
+      } & SecretDetail>(`/clusterapi/${memberClusterName}/api/v1/secret/${namespace}/${name}`);
+  return resp;
 }
 
 export async function CreateMemberClusterImagePullSecret(params: {
@@ -148,7 +144,7 @@ export async function CreateMemberClusterImagePullSecret(params: {
   spec: ImagePullSecretSpec;
 }) {
   const { memberClusterName, spec } = params;
-  const resp = await karmadaMemberClusterClient.post<IResponse<Secret>>(
+  const resp = await karmadaMemberClusterClient.post<Secret>(
     `/clusterapi/${memberClusterName}/api/v1/secret`,
     spec,
   );
