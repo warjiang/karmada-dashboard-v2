@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import {
-  IResponse,
-  karmadaMemberClusterClient,
-} from '../base';
+import {karmadaMemberClusterClient} from '../base';
 
 export interface LogSource {
   containerName: string;
@@ -64,7 +61,7 @@ export async function GetLogs(params: {
   const resp = await karmadaMemberClusterClient.get<LogDetails>(url, {
     params: queryParams,
   });
-  return resp.data;
+  return resp;
 }
 
 export async function DownloadLogs(params: {
@@ -84,7 +81,7 @@ export async function DownloadLogs(params: {
     params: queryParams,
     responseType: 'blob',
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetLogSources(params: {
@@ -94,10 +91,8 @@ export async function GetLogSources(params: {
 }) {
   const { namespace, resourceName, resourceType } = params;
   
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
+  const resp = await karmadaMemberClusterClient.get<{
       logSources: LogSource[];
-    }>
-  >(`/log/source/${namespace}/${resourceName}/${resourceType}`);
-  return resp.data;
+    }>(`/log/source/${namespace}/${resourceName}/${resourceType}`);
+  return resp;
 }

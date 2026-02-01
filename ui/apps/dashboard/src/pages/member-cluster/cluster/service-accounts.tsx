@@ -3,12 +3,12 @@ import { EyeOutlined, EditOutlined, DeleteOutlined, SafetyCertificateOutlined, K
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useMemberClusterContext } from '../hooks';
-import { ServiceAccount, GetMemberClusterServiceAccount, LocalObjectReference } from '@/services/member-cluster/serviceaccount.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
+import { ServiceAccount, GetMemberClusterServiceAccount, LocalObjectReference } from '@/services/member-cluster/serviceaccount';
+import useNamespace from '../../../hooks/use-namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterServiceAccounts() {
   const { message: messageApi } = App.useApp();
@@ -23,7 +23,7 @@ export default function MemberClusterServiceAccounts() {
   });
 
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
-  const [viewDetail, setViewDetail] = useState<Secret | null>(null);
+  const [viewDetail, setViewDetail] = useState<ServiceAccount|null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -33,11 +33,7 @@ export default function MemberClusterServiceAccounts() {
   const { nsOptions, isNsDataLoading } = useNamespace({});
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterServiceAccounts',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterServiceAccounts', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterServiceAccount({
         memberClusterName,

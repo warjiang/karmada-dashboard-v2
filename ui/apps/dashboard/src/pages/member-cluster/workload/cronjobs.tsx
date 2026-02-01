@@ -11,13 +11,13 @@ import {
   Workload,
   WorkloadDetail,
   WorkloadEvent,
-} from '@/services/member-cluster/workload.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
-import i18nInstance from '@/utils/i18n.tsx';
+} from '@/services/member-cluster/workload';
+import useNamespace from '@/hooks/use-namespace';
+import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterCronJobs() {
   const { message: messageApi } = App.useApp();
@@ -42,7 +42,7 @@ export default function MemberClusterCronJobs() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [memberClusterName, 'GetCronJobs', JSON.stringify(filter)],
+    queryKey: ['GetCronJobs', memberClusterName, filter],
     queryFn: async () => {
       const workloads = await GetMemberClusterCronJobs({
         memberClusterName,
@@ -120,9 +120,10 @@ export default function MemberClusterCronJobs() {
                   name: record.objectMeta.name,
                   kind: WorkloadKind.Cronjob,
                 });
+                
 
-                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
-                setViewEvents(eventsResp.events || []);
+                setViewDetail((detailResp?.data ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsResp?.data?.events || []);
                 setViewDrawerOpen(true);
               } finally {
                 setViewLoading(false);

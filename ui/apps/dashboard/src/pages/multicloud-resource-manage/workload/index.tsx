@@ -58,7 +58,7 @@ const WorkloadPage = () => {
 
   const { nsOptions, isNsDataLoading } = useNamespace({});
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['GetWorkloads', JSON.stringify(filter)],
+    queryKey: ['GetWorkloads', filter],
     queryFn: async () => {
       const clusters = await GetWorkloads({
         kind: filter.kind,

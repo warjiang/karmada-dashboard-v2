@@ -8,13 +8,14 @@ import {
   GetMemberClusterIngressDetail,
   GetMemberClusterIngressEvents,
   Ingress,
-} from '@/services/member-cluster/service.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
-import i18nInstance from '@/utils/i18n.tsx';
+} from '@/services/member-cluster/service';
+import {Event} from '@/services/member-cluster/event'
+import useNamespace from '@/hooks/use-namespace';
+import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterIngress() {
   const { message: messageApi } = App.useApp();
@@ -30,7 +31,7 @@ export default function MemberClusterIngress() {
 
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<Ingress | null>(null);
-  const [viewEvents, setViewEvents] = useState<any[]>([]);
+  const [viewEvents, setViewEvents] = useState<Event[]>([]);
   const [viewLoading, setViewLoading] = useState(false);
 
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -38,7 +39,7 @@ export default function MemberClusterIngress() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [memberClusterName, 'GetIngress', JSON.stringify(filter)],
+    queryKey: ['GetIngress', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterIngress({
         memberClusterName,

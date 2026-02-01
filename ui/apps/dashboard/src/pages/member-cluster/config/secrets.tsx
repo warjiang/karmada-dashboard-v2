@@ -28,13 +28,13 @@ import {
   GetMemberClusterSecretDetail,
   Secret,
   SecretDetail,
-} from '@/services/member-cluster/config.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
+} from '@/services/member-cluster/config';
+import useNamespace from '@/hooks/use-namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { PutResource } from '@/services/unstructured.ts';
-import { GetResource } from '@/services/member-cluster/unstructured.ts';
+import { PutResource } from '@/services/unstructured';
+import { GetResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterSecrets() {
   const { message: messageApi } = App.useApp();
@@ -59,11 +59,7 @@ export default function MemberClusterSecrets() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterSecrets',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterSecrets', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterSecrets({
         memberClusterName,

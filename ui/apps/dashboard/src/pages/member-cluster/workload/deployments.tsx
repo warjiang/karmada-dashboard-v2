@@ -11,13 +11,13 @@ import {
     Workload,
     WorkloadDetail,
     WorkloadEvent,
- } from '@/services/member-cluster/workload.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
-import i18nInstance from '@/utils/i18n.tsx';
+ } from '@/services/member-cluster/workload';
+import useNamespace from '@/hooks/use-namespace';
+import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterDeployments() {
   const { message: messageApi } = App.useApp();
@@ -41,7 +41,7 @@ export default function MemberClusterDeployments() {
   const [editContent, setEditContent] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
   const { data, isLoading } = useQuery({
-    queryKey: [memberClusterName, 'GetWorkloads', JSON.stringify(filter)],
+    queryKey: ['GetWorkloads', memberClusterName, filter],
     queryFn: async () => {
       const workloads = await GetMemberClusterWorkloads({
         memberClusterName: memberClusterName,
@@ -49,7 +49,7 @@ export default function MemberClusterDeployments() {
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
-      return workloads;
+      return workloads.data;
     },
   });
 
@@ -125,8 +125,8 @@ export default function MemberClusterDeployments() {
                   name: record.objectMeta.name,
                   kind: record.typeMeta.kind as WorkloadKind,
                 });
-                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
-                setViewEvents(eventsRet?.events || []);
+                setViewDetail((detailResp?.data ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsRet?.data?.events || []);
                 setViewDrawerOpen(true);
               } finally {
                 setViewLoading(false);
@@ -141,13 +141,14 @@ export default function MemberClusterDeployments() {
             onClick={async () => {
               try {
                 const ret = await GetResource({
+                  memberClusterName,
                   kind: record.typeMeta.kind,
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
 
-                if (ret.code !== 200) {
-                  void messageApi.error(ret.message || 'Failed to load deployment');
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load deployment');
                   return;
                 }
 
@@ -315,6 +316,7 @@ export default function MemberClusterDeployments() {
                   const namespace = (metadata.namespace || '');
 
                   const ret = await PutResource({
+                    memberClusterName,
                     kind,
                     name,
                     namespace,

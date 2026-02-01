@@ -14,10 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import {
-  IResponse,
-  karmadaMemberClusterClient,
-} from '../base';
+import { karmadaMemberClusterClient } from '../base';
 
 export interface AppDeploymentSpec {
   name: string;
@@ -57,45 +54,33 @@ export interface ValidationResponse {
 }
 
 export async function CreateAppDeployment(spec: AppDeploymentSpec) {
-  const resp = await karmadaMemberClusterClient.post<
-    IResponse<any>
-  >('/appdeployment', spec);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<any>('/appdeployment', spec);
+  return resp;
 }
 
 export async function CreateAppDeploymentFromFile(spec: AppDeploymentFromFileSpec) {
-  const resp = await karmadaMemberClusterClient.post<
-    IResponse<any>
-  >('/appdeploymentfromfile', spec);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<any>('/appdeploymentfromfile', spec);
+  return resp;
 }
 
 export async function GetProtocols() {
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      protocols: string[];
-    }>
-  >('/appdeployment/protocols');
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    protocols: string[];
+  }>('/appdeployment/protocols');
+  return resp;
 }
 
 export async function ValidateImageReference(imageReference: string) {
-  const resp = await karmadaMemberClusterClient.post<
-    IResponse<ValidationResponse>
-  >('/appdeployment/validate/imagereference', { imageReference });
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<ValidationResponse>('/appdeployment/validate/imagereference', { imageReference });
+  return resp;
 }
 
 export async function ValidateAppName(name: string, namespace?: string) {
-  const resp = await karmadaMemberClusterClient.post<
-    IResponse<ValidationResponse>
-  >('/appdeployment/validate/name', { name, namespace });
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<ValidationResponse>('/appdeployment/validate/name', { name, namespace });
+  return resp;
 }
 
 export async function ValidateProtocol(protocol: string) {
-  const resp = await karmadaMemberClusterClient.post<
-    IResponse<ValidationResponse>
-  >('/appdeployment/validate/protocol', { protocol });
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<ValidationResponse>('/appdeployment/validate/protocol', { protocol });
+  return resp;
 }

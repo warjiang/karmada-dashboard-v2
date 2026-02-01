@@ -2,7 +2,7 @@ import { useParams, Outlet } from 'react-router-dom';
 import MemberClusterSidebar from './components/sidebar';
 import Header from '@/layout/header';
 import { Layout as AntdLayout } from 'antd';
-import { cn } from '@/utils/cn.ts';
+import { cn } from '@/utils/cn';
 import { getSidebarWidth } from '@/utils/i18n';
 import { useWindowSize } from '@uidotdev/usehooks';
 import Panel from '@/components/panel';

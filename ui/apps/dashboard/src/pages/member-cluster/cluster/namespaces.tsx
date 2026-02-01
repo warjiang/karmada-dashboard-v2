@@ -23,11 +23,11 @@ import {
   Namespace,
   GetMemberClusterNamespaces,
   GetMemberClusterNamespaceDetail,
-} from '@/services/member-cluster/namespace.ts';
+} from '@/services/member-cluster/namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterNamespaces() {
   const { message: messageApi } = App.useApp();
@@ -46,17 +46,13 @@ export default function MemberClusterNamespaces() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterNamespaces',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterNamespaces', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterNamespaces({
         memberClusterName,
         keyword: filter.searchText,
       });
-      return ret;
+      return ret.data;
     },
   });
 
@@ -164,7 +160,7 @@ export default function MemberClusterNamespaces() {
                   memberClusterName,
                   name: record.objectMeta.name,
                 });
-                setViewDetail(detail as Namespace);
+                setViewDetail(detail.data as Namespace);
                 setViewDrawerOpen(true);
               } catch {
                 void messageApi.error('Failed to load namespace');

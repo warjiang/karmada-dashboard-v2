@@ -17,8 +17,6 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
-  karmadaMemberClusterClient,
   karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
@@ -69,28 +67,22 @@ export async function GetPersistentVolumes(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      persistentVolumes: PersistentVolume[];
-    }>
-  >('/persistentvolume', {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    persistentVolumes: PersistentVolume[];
+  }>('/persistentvolume', {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
 export async function GetPersistentVolumeDetail(name: string) {
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & PersistentVolume
-    >
-  >(`/persistentvolume/${name}`);
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & PersistentVolume>(`/persistentvolume/${name}`);
   return resp.data;
 }
 
@@ -99,13 +91,9 @@ export async function GetPersistentVolumeDetailWithNamespace(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & PersistentVolume
-    >
-  >(`/persistentvolume/namespace/${namespace}/name/${name}`);
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & PersistentVolume>(`/persistentvolume/namespace/${namespace}/name/${name}`);
   return resp.data;
 }
 
@@ -124,15 +112,13 @@ export async function GetPersistentVolumeClaims(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      persistentVolumeClaims: PersistentVolumeClaim[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    persistentVolumeClaims: PersistentVolumeClaim[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
@@ -143,13 +129,9 @@ export async function GetPersistentVolumeClaimDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & PersistentVolumeClaim
-    >
-  >(`/persistentvolumeclaim/${namespace}/${name}`);
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & PersistentVolumeClaim>(`/persistentvolumeclaim/${namespace}/${name}`);
   return resp.data;
 }
 
@@ -166,41 +148,33 @@ export async function GetStorageClasses(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      storageClasses: StorageClass[];
-    }>
-  >('/storageclass', {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    storageClasses: StorageClass[];
+  }>('/storageclass', {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
 }
 
 export async function GetStorageClassDetail(name: string) {
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & StorageClass
-    >
-  >(`/storageclass/${name}`);
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & StorageClass>(`/storageclass/${name}`);
   return resp.data;
 }
 
 export async function GetStorageClassPersistentVolumes(name: string) {
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      persistentVolumes: PersistentVolume[];
-    }>
-  >(`/storageclass/${name}/persistentvolume`);
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    persistentVolumes: PersistentVolume[];
+  }>(`/storageclass/${name}/persistentvolume`);
   return resp.data;
 }
 

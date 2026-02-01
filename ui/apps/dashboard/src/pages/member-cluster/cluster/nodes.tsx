@@ -7,7 +7,6 @@ import {
   Table,
   TableColumnProps,
   Tag,
-  Tooltip,
   Progress,
 } from 'antd';
 import {
@@ -26,7 +25,7 @@ import {
   NodeDetail,
   GetMemberClusterNodes,
   GetMemberClusterNodeDetail,
-} from '@/services/member-cluster/node.ts';
+} from '@/services/member-cluster/node';
 import dayjs from 'dayjs';
 
 export default function MemberClusterNodes() {
@@ -42,17 +41,13 @@ export default function MemberClusterNodes() {
   const [viewLoading, setViewLoading] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterNodes',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterNodes', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterNodes({
         memberClusterName,
         keyword: filter.searchText,
       });
-      return ret;
+      return ret.data;
     },
   });
 
@@ -230,7 +225,7 @@ export default function MemberClusterNodes() {
                   memberClusterName,
                   name: record.objectMeta.name,
                 });
-                setViewDetail(detail as NodeDetail);
+                setViewDetail(detail.data as NodeDetail);
                 setViewDrawerOpen(true);
               } catch {
                 void messageApi.error('Failed to load node');

@@ -11,13 +11,13 @@ import {
   Workload,
   WorkloadDetail,
   WorkloadEvent,
-} from '@/services/member-cluster/workload.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
-import i18nInstance from '@/utils/i18n.tsx';
+} from '@/services/member-cluster/workload';
+import useNamespace from '@/hooks/use-namespace';
+import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterJobs() {
   const { message: messageApi } = App.useApp();
@@ -42,14 +42,14 @@ export default function MemberClusterJobs() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [memberClusterName, 'GetJobs', JSON.stringify(filter)],
+    queryKey: ['GetJobs', memberClusterName, filter],
     queryFn: async () => {
       const workloads = await GetMemberClusterJobs({
         memberClusterName,
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
-      return workloads;
+      return workloads.data;
     },
   });
 
@@ -121,8 +121,8 @@ export default function MemberClusterJobs() {
                   kind: WorkloadKind.Job,
                 });
 
-                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
-                setViewEvents(eventsResp.events || []);
+                setViewDetail((detailResp?.data ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsResp?.data?.events || []);
                 setViewDrawerOpen(true);
               } finally {
                 setViewLoading(false);
@@ -137,13 +137,14 @@ export default function MemberClusterJobs() {
             onClick={async () => {
               try {
                 const ret = await GetResource({
+                  memberClusterName,
                   kind: record.typeMeta.kind,
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
 
-                if (ret.code !== 200) {
-                  void messageApi.error(ret.message || 'Failed to load Job');
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load Job');
                   return;
                 }
 
@@ -203,7 +204,7 @@ export default function MemberClusterJobs() {
             `${record.objectMeta.namespace}-${record.objectMeta.name}`
           }
           columns={columns}
-          dataSource={data?.data?.jobs || []}
+          dataSource={data?.jobs || []}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -307,6 +308,7 @@ export default function MemberClusterJobs() {
                   const namespace = metadata.namespace || '';
 
                   const ret = await PutResource({
+                    memberClusterName,
                     kind,
                     name,
                     namespace,

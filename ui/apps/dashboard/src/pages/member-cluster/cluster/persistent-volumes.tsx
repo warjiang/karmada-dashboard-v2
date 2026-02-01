@@ -17,11 +17,11 @@ import {
   PersistentVolume,
   GetMemberClusterPersistentVolumeDetail,
   GetMemberClusterPersistentVolumes,
-} from '@/services/member-cluster/storage.ts';
+} from '@/services/member-cluster/storage';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterPersistentVolumes() {
   const { message: messageApi } = App.useApp();
@@ -42,11 +42,7 @@ export default function MemberClusterPersistentVolumes() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterPersistentVolumes',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterPersistentVolumes', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterPersistentVolumes({
         memberClusterName,

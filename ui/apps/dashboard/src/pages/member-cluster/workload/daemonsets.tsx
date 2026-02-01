@@ -11,13 +11,13 @@ import {
   Workload,
   WorkloadDetail,
   WorkloadEvent,
-} from '@/services/member-cluster/workload.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
-import i18nInstance from '@/utils/i18n.tsx';
+} from '@/services/member-cluster/workload';
+import useNamespace from '@/hooks/use-namespace';
+import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterDaemonSets() {
   const { message: messageApi } = App.useApp();
@@ -42,7 +42,7 @@ export default function MemberClusterDaemonSets() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [memberClusterName, 'GetDaemonSets', JSON.stringify(filter)],
+    queryKey: ['GetDaemonSets', memberClusterName, filter],
     queryFn: async () => {
       const workloads = await GetMemberClusterWorkloads({
         memberClusterName,
@@ -50,7 +50,7 @@ export default function MemberClusterDaemonSets() {
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
-      return workloads;
+      return workloads.data;
     },
   });
 
@@ -121,8 +121,8 @@ export default function MemberClusterDaemonSets() {
                   name: record.objectMeta.name,
                   kind: WorkloadKind.Daemonset,
                 });
-                setViewDetail((detailResp ?? ({} as any)) as WorkloadDetail);
-                setViewEvents(eventsResp.events || []);
+                setViewDetail((detailResp?.data ?? ({} as any)) as WorkloadDetail);
+                setViewEvents(eventsResp?.data?.events || []);
                 setViewDrawerOpen(true);
               } finally {
                 setViewLoading(false);
@@ -137,13 +137,14 @@ export default function MemberClusterDaemonSets() {
             onClick={async () => {
               try {
                 const ret = await GetResource({
+                  memberClusterName,
                   kind: record.typeMeta.kind,
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
 
-                if (ret.code !== 200) {
-                  void messageApi.error(ret.message || 'Failed to load DaemonSet');
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load DaemonSet');
                   return;
                 }
 
@@ -307,6 +308,7 @@ export default function MemberClusterDaemonSets() {
                   const namespace = metadata.namespace || '';
 
                   const ret = await PutResource({
+                    memberClusterName,
                     kind,
                     name,
                     namespace,

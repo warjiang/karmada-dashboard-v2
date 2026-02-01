@@ -27,13 +27,13 @@ import {
   GetMemberClusterServices,
   Service,
   ServiceType,
-} from '@/services/member-cluster/service.ts';
-import useNamespace from '../../../hooks/use-namespace.ts';
+} from '@/services/member-cluster/service';
+import useNamespace from '@/hooks/use-namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
-
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
+import {Event} from '@/services/member-cluster/event'
 export default function MemberClusterServices() {
   const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
@@ -50,7 +50,7 @@ export default function MemberClusterServices() {
 
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<Service | null>(null);
-  const [viewEvents, setViewEvents] = useState<any[]>([]);
+  const [viewEvents, setViewEvents] = useState<Event[]>([]);
   const [viewLoading, setViewLoading] = useState(false);
 
   const [editDrawerOpen, setEditDrawerOpen] = useState(false);
@@ -58,14 +58,14 @@ export default function MemberClusterServices() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [memberClusterName, 'GetServices', JSON.stringify(filter)],
+    queryKey: ['GetServices', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterServices({
         memberClusterName,
         namespace: filter.selectedWorkSpace,
         keyword: filter.searchText,
       });
-      return ret || {};
+      return ret.data;
     },
   });
 
@@ -250,17 +250,8 @@ export default function MemberClusterServices() {
                   name: record.objectMeta.name,
                 });
 
-                const detailData =
-                  (detailResp as any)?.data !== undefined
-                    ? (detailResp as any).data
-                    : detailResp;
-                const eventsData =
-                  (eventsResp as any)?.data !== undefined
-                    ? (eventsResp as any).data
-                    : eventsResp;
-
-                setViewDetail(detailData as Service);
-                setViewEvents(eventsData?.events || []);
+                setViewDetail((detailResp.data ?? {}) as Service);
+                setViewEvents(eventsResp?.data?.events ?? []);
                 setViewDrawerOpen(true);
               } catch {
                 void messageApi.error('Failed to load Service details');
@@ -277,15 +268,14 @@ export default function MemberClusterServices() {
             onClick={async () => {
               try {
                 const ret = await GetResource({
+                  memberClusterName,
                   kind: record.typeMeta.kind,
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
 
-                if (ret.code !== 200) {
-                  void messageApi.error(
-                    ret.message || 'Failed to load Service',
-                  );
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load Service');
                   return;
                 }
 
@@ -345,7 +335,7 @@ export default function MemberClusterServices() {
       <div className="flex-1 flex flex-col">
         <Table
           columns={columns}
-          dataSource={(data as any)?.services || []}
+          dataSource={data?.services || []}
           rowKey={(record) => record.objectMeta.name}
           pagination={{
             pageSize: 10,
@@ -450,6 +440,7 @@ export default function MemberClusterServices() {
                   const namespace = metadata.namespace || '';
 
                   const ret = await PutResource({
+                    memberClusterName,
                     kind,
                     name,
                     namespace,

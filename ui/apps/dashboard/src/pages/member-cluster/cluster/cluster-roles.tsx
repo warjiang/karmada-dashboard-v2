@@ -18,11 +18,11 @@ import {
   GetMemberClusterClusterRoleDetail,
   GetMemberClusterClusterRoles,
   PolicyRule,
-} from '@/services/member-cluster/rbac.ts';
+} from '@/services/member-cluster/rbac';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
 
 export default function MemberClusterClusterRoles() {
   const { message: messageApi } = App.useApp();
@@ -43,11 +43,7 @@ export default function MemberClusterClusterRoles() {
   const [editSubmitting, setEditSubmitting] = useState(false);
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterClusterRoles',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterClusterRoles', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterClusterRoles({
         memberClusterName,

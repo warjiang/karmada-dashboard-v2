@@ -17,7 +17,6 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
   karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
@@ -70,15 +69,13 @@ export async function GetReplicaSets(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      replicaSets: ReplicaSet[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    replicaSets: ReplicaSet[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
   return resp.data;
@@ -89,13 +86,9 @@ export async function GetReplicaSetDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & ReplicaSet
-    >
-  >(`/replicaset/${namespace}/${name}`);
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & ReplicaSet>(`/replicaset/${namespace}/${name}`);
   return resp.data;
 }
 
@@ -104,16 +97,14 @@ export async function GetReplicaSetEvents(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: any[];
-    }>
-  >(`/replicaset/${namespace}/${name}/event`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: any[];
+  }>(`/replicaset/${namespace}/${name}/event`);
+  return resp;
 }
 
 export async function GetReplicaSetPods(params: {
@@ -121,16 +112,14 @@ export async function GetReplicaSetPods(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(`/replicaset/${namespace}/${name}/pod`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(`/replicaset/${namespace}/${name}/pod`);
+  return resp;
 }
 
 export async function GetReplicaSetServices(params: {
@@ -138,16 +127,14 @@ export async function GetReplicaSetServices(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      services: any[];
-    }>
-  >(`/replicaset/${namespace}/${name}/service`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    services: any[];
+  }>(`/replicaset/${namespace}/${name}/service`);
+  return resp;
 }
 
 // ReplicationController APIs
@@ -165,18 +152,16 @@ export async function GetReplicationControllers(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      replicationControllers: ReplicationController[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    replicationControllers: ReplicationController[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetReplicationControllerDetail(params: {
@@ -184,14 +169,10 @@ export async function GetReplicationControllerDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
-        errors: string[];
-      } & ReplicationController
-    >
-  >(`/replicationcontroller/${namespace}/${name}`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & ReplicationController>(`/replicationcontroller/${namespace}/${name}`);
+  return resp;
 }
 
 export async function GetReplicationControllerEvents(params: {
@@ -199,16 +180,14 @@ export async function GetReplicationControllerEvents(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: any[];
-    }>
-  >(`/replicationcontroller/${namespace}/${name}/event`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: any[];
+  }>(`/replicationcontroller/${namespace}/${name}/event`);
+  return resp;
 }
 
 export async function GetReplicationControllerPods(params: {
@@ -216,16 +195,14 @@ export async function GetReplicationControllerPods(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      pods: any[];
-    }>
-  >(`/replicationcontroller/${namespace}/${name}/pod`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    pods: any[];
+  }>(`/replicationcontroller/${namespace}/${name}/pod`);
+  return resp;
 }
 
 export async function GetReplicationControllerServices(params: {
@@ -233,16 +210,14 @@ export async function GetReplicationControllerServices(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      services: any[];
-    }>
-  >(`/replicationcontroller/${namespace}/${name}/service`);
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    services: any[];
+  }>(`/replicationcontroller/${namespace}/${name}/service`);
+  return resp;
 }
 
 export async function ScaleReplicationController(params: {
@@ -251,8 +226,6 @@ export async function ScaleReplicationController(params: {
   replicas: number;
 }) {
   const { namespace, name, replicas } = params;
-  const resp = await karmadaMemberClusterClient.post<
-    IResponse<any>
-  >(`/replicationcontroller/${namespace}/${name}/update/pod`, { replicas });
-  return resp.data;
+  const resp = await karmadaMemberClusterClient.post<any>(`/replicationcontroller/${namespace}/${name}/update/pod`, { replicas });
+  return resp;
 }

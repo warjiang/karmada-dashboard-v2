@@ -17,7 +17,6 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
   karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
@@ -60,18 +59,14 @@ export async function GetMemberClusterServiceAccount(params: {
   return resp.data;
 }
 
-export async function GetMemberClusterServiceDetail(params: {
+export async function GetMemberClusterServiceAccountDetail(params: {
   memberClusterName: string;
   namespace: string;
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<
-      {
+  const resp = await karmadaMemberClusterClient.get<{
         errors: string[];
-      } & ServiceAccount
-    >
-  >(`/clusterapi/${memberClusterName}/api/v1/serviceaccount/${namespace}/${name}`);
+      } & ServiceAccount>(`/clusterapi/${memberClusterName}/api/v1/serviceaccount/${namespace}/${name}`);
   return resp.data;
 }

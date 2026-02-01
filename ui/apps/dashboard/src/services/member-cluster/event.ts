@@ -17,7 +17,6 @@ limitations under the License.
 import {
   convertDataSelectQuery,
   DataSelectQuery,
-  IResponse,
   karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
@@ -54,18 +53,16 @@ export async function GetEvents(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: Event[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: Event[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }
 
 export async function GetMemberClusterEvents(params: {
@@ -86,16 +83,14 @@ export async function GetMemberClusterEvents(params: {
     ? `/clusterapi/${memberClusterName}/api/v1/event/${namespace}`
     : `/clusterapi/${memberClusterName}/api/v1/event`;
 
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<{
-      errors: string[];
-      listMeta: {
-        totalItems: number;
-      };
-      events: Event[];
-    }>
-  >(url, {
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    events: Event[];
+  }>(url, {
     params: convertDataSelectQuery(requestData),
   });
-  return resp.data;
+  return resp;
 }

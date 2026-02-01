@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 import {
-  IResponse,
   karmadaMemberClusterClient,
 } from '../base';
 
@@ -30,9 +29,7 @@ export async function GetResourceScale(params: {
 }) {
   const { kind, namespace, name } = params;
   const url = namespace ? `/scale/${kind}/${namespace}/${name}` : `/scale/${kind}/${name}`;
-  const resp = await karmadaMemberClusterClient.get<
-    IResponse<ScaleResource>
-  >(url);
+  const resp = await karmadaMemberClusterClient.get<ScaleResource>(url);
   return resp.data;
 }
 
@@ -44,8 +41,6 @@ export async function ScaleResource(params: {
 }) {
   const { kind, namespace, name, replicas } = params;
   const url = namespace ? `/scale/${kind}/${namespace}/${name}` : `/scale/${kind}/${name}`;
-  const resp = await karmadaMemberClusterClient.put<
-    IResponse<ScaleResource>
-  >(url, { replicas });
+  const resp = await karmadaMemberClusterClient.put<ScaleResource>(url, { replicas });
   return resp.data;
 }

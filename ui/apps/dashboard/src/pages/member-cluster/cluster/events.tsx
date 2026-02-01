@@ -1,4 +1,4 @@
-import { App, Input, Table, Tag, Space, Tooltip } from 'antd';
+import { Input, Table, Tag, Space, Tooltip, Button } from 'antd';
 import {
   EyeOutlined,
   ExclamationCircleOutlined,
@@ -12,10 +12,9 @@ import { useMemberClusterContext } from '../hooks';
 import {
   Event as ClusterEvent,
   GetMemberClusterEvents,
-} from '@/services/member-cluster/event.ts';
+} from '@/services/member-cluster/event';
 
 export default function MemberClusterEvents() {
-  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
 
   const [filter, setFilter] = useState<{
@@ -27,18 +26,14 @@ export default function MemberClusterEvents() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: [
-      memberClusterName,
-      'GetMemberClusterEvents',
-      JSON.stringify(filter),
-    ],
+    queryKey: ['GetMemberClusterEvents', memberClusterName, filter],
     queryFn: async () => {
       const ret = await GetMemberClusterEvents({
         memberClusterName,
         namespace: filter.namespace || undefined,
         keyword: filter.searchText,
       });
-      return ret;
+      return ret.data;
     },
   });
 
@@ -58,6 +53,7 @@ export default function MemberClusterEvents() {
     );
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getReasonTag = (reason: string, _type: string) => {
     const reasonColors: Record<string, string> = {
       'Pulling': 'blue',
@@ -121,7 +117,10 @@ export default function MemberClusterEvents() {
       title: 'Reason',
       dataIndex: 'reason',
       key: 'reason',
-      render: (reason: string, record: any) => getReasonTag(reason, record.type),
+      render: (reason: string, record: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+        return getReasonTag(reason, record.type)
+      },
       width: 120
     },
     {
