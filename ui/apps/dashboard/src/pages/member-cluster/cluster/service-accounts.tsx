@@ -408,17 +408,6 @@ export default function MemberClusterServiceAccounts() {
           onChange={(value) => setEditContent(value || '')}
         />
       </Drawer>
-
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Default ServiceAccounts cannot be deleted. The
-          member cluster name "{memberClusterName}" is used for API calls to
-          fetch cluster-specific ServiceAccounts.
-          <br />
-          <strong>Token Automount:</strong> Controls whether API tokens are
-          automatically mounted in pods using this ServiceAccount.
-        </p>
-      </div>
     </div>
   );
 }
