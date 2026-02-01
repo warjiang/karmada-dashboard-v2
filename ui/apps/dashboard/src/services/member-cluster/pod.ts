@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -81,7 +81,7 @@ export async function GetMemberClusterPods(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -101,7 +101,7 @@ export async function GetMemberClusterPodDetail(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -117,7 +117,7 @@ export async function GetMemberClusterPodContainers(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       containers: Container[];
     }>
@@ -133,7 +133,7 @@ export async function GetMemberClusterPodEvents(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -151,7 +151,7 @@ export async function GetMemberClusterPodPersistentVolumeClaims(params: {
   name: string;
 }) {
   const { memberClusterName, namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       persistentVolumeClaims: any[];
     }>
@@ -168,7 +168,7 @@ export async function GetMemberClusterPodShell(params: {
   container: string;
 }) {
   const { memberClusterName, namespace, pod, container } = params;
-  const resp = await karmadaClient.get<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.get<IResponse<any>>(
     `/clusterapi/${memberClusterName}/api/v1/pod/${namespace}/${pod}/shell/${container}`,
   );
   return resp.data;
