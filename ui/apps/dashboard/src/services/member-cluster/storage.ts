@@ -19,6 +19,7 @@ import {
   DataSelectQuery,
   IResponse,
   karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -200,5 +201,41 @@ export async function GetStorageClassPersistentVolumes(name: string) {
       persistentVolumes: PersistentVolume[];
     }>
   >(`/storageclass/${name}/persistentvolume`);
+  return resp.data;
+}
+
+export async function GetMemberClusterPersistentVolumes(params?: {
+  memberClusterName: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, keyword, ...queryParams } = params || {};
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+    listMeta: {
+      totalItems: number;
+    };
+    items: PersistentVolume[];
+  }>(`/clusterapi/${memberClusterName}/api/v1/persistentvolume`, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterPersistentVolumeDetail(params: {
+  memberClusterName: string;
+  name: string;
+}) {
+  const { memberClusterName, name } = params;
+  const resp = await karmadaMemberClusterClient.get<{
+    errors: string[];
+  } & PersistentVolume>(`/clusterapi/${memberClusterName}/api/v1/persistentvolume/${name}`);
   return resp.data;
 }

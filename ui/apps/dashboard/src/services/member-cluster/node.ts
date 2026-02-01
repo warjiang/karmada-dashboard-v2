@@ -18,11 +18,10 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
-  TypeMeta,
+  TypeMeta
 } from '../base';
-
 export interface NodeCondition {
   type: string;
   status: string;
@@ -103,7 +102,7 @@ export async function GetMemberClusterNodes(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -122,7 +121,7 @@ export async function GetMemberClusterNodeDetail(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -137,7 +136,7 @@ export async function GetMemberClusterNodeEvents(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -154,7 +153,7 @@ export async function GetMemberClusterNodePods(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -171,7 +170,7 @@ export async function DrainMemberClusterNode(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.put<IResponse<any>>(
+  const resp = await karmadaMemberClusterClient.put<IResponse<any>>(
     `/clusterapi/${memberClusterName}/api/v1/node/${name}/drain`,
   );
   return resp.data;

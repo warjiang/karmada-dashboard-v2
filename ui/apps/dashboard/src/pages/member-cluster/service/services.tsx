@@ -345,7 +345,7 @@ export default function MemberClusterServices() {
       <div className="flex-1 flex flex-col">
         <Table
           columns={columns}
-          dataSource={data?.services || []}
+          dataSource={(data as any)?.services || []}
           rowKey={(record) => record.objectMeta.name}
           pagination={{
             pageSize: 10,

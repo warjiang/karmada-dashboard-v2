@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -48,7 +48,7 @@ export async function GetMemberClusterNamespaces(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -67,7 +67,7 @@ export async function GetMemberClusterNamespaceDetail(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -82,7 +82,7 @@ export async function GetMemberClusterNamespaceEvents(params: {
   name: string;
 }) {
   const { memberClusterName, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -99,7 +99,7 @@ export async function CreateMemberClusterNamespace(params: {
   spec: NamespaceSpec;
 }) {
   const { memberClusterName, spec } = params;
-  const resp = await karmadaClient.post<IResponse<string>>(
+  const resp = await karmadaMemberClusterClient.post<IResponse<string>>(
     `/clusterapi/${memberClusterName}/api/v1/namespace`,
     spec,
   );

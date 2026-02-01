@@ -1,57 +1,71 @@
-import { Table, Tag, Button, Space, Tooltip } from 'antd';
+import {
+  App,
+  Button,
+  Drawer,
+  Input,
+  Select,
+  Space,
+  Table,
+  TableColumnProps,
+  Tag,
+  Tooltip,
+} from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined, TeamOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { useMemberClusterContext } from '../hooks';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  RoleBinding,
+  GetMemberClusterRoleBindingDetail,
+  GetMemberClusterRoleBindings,
+  RoleRef,
+  Subject,
+} from '@/services/member-cluster/rbac.ts';
+import useNamespace from '../../../hooks/use-namespace.ts';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
 
 export default function MemberClusterRoleBindings() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
 
-  const mockRoleBindings = [
-    {
-      name: 'admin-binding',
-      namespace: 'production',
-      roleRef: 'admin',
-      subjects: [
-        { kind: 'User', name: 'alice@company.com' },
-        { kind: 'ServiceAccount', name: 'admin-sa' }
-      ],
-      age: '30d',
-      labels: 'app=backend,environment=production'
-    },
-    {
-      name: 'developer-access',
-      namespace: 'default',
-      roleRef: 'developer',
-      subjects: [
-        { kind: 'Group', name: 'developers' },
-        { kind: 'User', name: 'bob@company.com' }
-      ],
-      age: '20d',
-      labels: 'team=frontend,access=development'
-    },
-    {
-      name: 'monitoring-reader',
-      namespace: 'monitoring',
-      roleRef: 'view',
-      subjects: [
-        { kind: 'ServiceAccount', name: 'prometheus' },
-        { kind: 'ServiceAccount', name: 'grafana' }
-      ],
-      age: '15d',
-      labels: 'app=monitoring,component=rbac'
-    },
-    {
-      name: 'secret-reader',
-      namespace: 'kube-system',
-      roleRef: 'secret-reader',
-      subjects: [
-        { kind: 'ServiceAccount', name: 'secret-manager' }
-      ],
-      age: '45d',
-      labels: 'component=system,type=automation'
-    }
-  ];
+  const [filter, setFilter] = useState<{
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    selectedWorkSpace: '',
+    searchText: '',
+  });
 
-  const getSubjectTag = (subject: any) => {
+  const { nsOptions, isNsDataLoading } = useNamespace({});
+
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<RoleBinding | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      memberClusterName,
+      'GetMemberClusterRoleBindings',
+      JSON.stringify(filter),
+    ],
+    queryFn: async () => {
+      const ret = await GetMemberClusterRoleBindings({
+        memberClusterName,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      return ret;
+    },
+  });
+
+  const getSubjectTag = (subject: Subject) => {
     const kindColors: Record<string, string> = {
       'User': 'blue',
       'Group': 'green',
@@ -66,17 +80,21 @@ export default function MemberClusterRoleBindings() {
 
     return (
       <Tag 
-        key={`${subject.kind}-${subject.name}`}
         color={kindColors[subject.kind] || 'default'} 
         icon={kindIcons[subject.kind]}
         className="mb-1"
       >
         {subject.kind}: {subject.name}
+        {subject.namespace && <span className="text-xs opacity-75"> ({subject.namespace})</span>}
       </Tag>
     );
   };
 
-  const formatSubjects = (subjects: any[]) => {
+  const formatSubjects = (subjects?: Subject[]) => {
+    if (!subjects || subjects.length === 0) {
+      return <span className="text-gray-400">-</span>;
+    }
+
     if (subjects.length <= 2) {
       return (
         <div className="flex flex-col gap-1">
@@ -93,118 +111,348 @@ export default function MemberClusterRoleBindings() {
       }>
         <div className="flex flex-col gap-1">
           {subjects.slice(0, 2).map(subject => getSubjectTag(subject))}
-          <Tag  color="cyan">+{subjects.length - 2} more</Tag>
+          <Tag color="cyan">+{subjects.length - 2} more</Tag>
         </div>
       </Tooltip>
     );
   };
 
-  const formatLabels = (labels: string) => {
-    const labelPairs = labels.split(',');
-    const firstLabel = labelPairs[0];
-    const remainingCount = labelPairs.length - 1;
-    
-    if (labelPairs.length === 1) {
-      return <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>;
+  const formatRoleRef = (roleRef?: RoleRef) => {
+    if (!roleRef) {
+      return <span className="text-gray-400">-</span>;
     }
-    
+
+    const kindColors: Record<string, string> = {
+      Role: 'blue',
+      ClusterRole: 'orange',
+    };
+
     return (
-      <Tooltip title={labels}>
+      <Tag
+        color={kindColors[roleRef.kind] || 'default'}
+        icon={<SafetyCertificateOutlined />}
+      >
+        {roleRef.name} ({roleRef.kind})
+      </Tag>
+    );
+  };
+
+  const formatLabels = (roleBinding: RoleBinding) => {
+    const labels = roleBinding.objectMeta.labels || {};
+    const entries = Object.entries(labels);
+    if (!entries.length) {
+      return <span className="text-gray-400">-</span>;
+    }
+    const first = `${entries[0][0]}=${entries[0][1]}`;
+    const remaining = entries.length - 1;
+
+    if (entries.length === 1) {
+      return (
+        <Tag color="geekblue" className="text-xs">
+          {first}
+        </Tag>
+      );
+    }
+
+    const full = entries.map(([k, v]) => `${k}=${v}`).join(', ');
+
+    return (
+      <Tooltip title={full}>
         <div className="flex items-center gap-1">
-          <Tag color="geekblue" className="text-xs">{firstLabel}</Tag>
-          {remainingCount > 0 && (
-            <Tag  color="purple">+{remainingCount}</Tag>
-          )}
+          <Tag color="geekblue" className="text-xs">
+            {first}
+          </Tag>
+          <Tag color="purple">+{remaining}</Tag>
         </div>
       </Tooltip>
     );
   };
 
-  const columns = [
+  const columns: TableColumnProps<RoleBinding>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_: string, record: RoleBinding) => (
+        <strong>{record.objectMeta.name}</strong>
+      ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
-      key: 'namespace'
+      key: 'namespace',
+      render: (_: string, record: RoleBinding) => record.objectMeta.namespace,
     },
     {
       title: 'Role',
       dataIndex: 'roleRef',
       key: 'roleRef',
-      render: (roleRef: string) => (
-        <Tag color="orange" icon={<SafetyCertificateOutlined />}>
-          {roleRef}
-        </Tag>
-      )
+      render: (_: unknown, record: RoleBinding) => formatRoleRef(record.roleRef),
     },
     {
       title: 'Subjects',
       dataIndex: 'subjects',
       key: 'subjects',
-      render: (subjects: any[]) => formatSubjects(subjects)
+      render: (_: unknown, record: RoleBinding) => formatSubjects(record.subjects),
     },
     {
       title: 'Labels',
       dataIndex: 'labels',
       key: 'labels',
-      render: (labels: string) => formatLabels(labels)
+      render: (_: unknown, record: RoleBinding) => formatLabels(record),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
+      key: 'age',
+      render: (_: string, record: RoleBinding) => {
+        const create = dayjs(record.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
+      render: (_: unknown, record: RoleBinding) => (
         <Space>
-          <Button icon={<EyeOutlined />}  title="View details">
+          <Button
+            icon={<EyeOutlined />}
+            title="View RoleBinding details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterRoleBindingDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                });
+
+                setViewDetail(detailResp as RoleBinding);
+                setViewDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load RoleBinding');
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          <Button icon={<EditOutlined />}  title="Edit RoleBinding">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit RoleBinding"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  memberClusterName: memberClusterName,
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+                if (ret.status !== 200) {
+                  void messageApi.error(
+                    'Failed to load RoleBinding',
+                  );
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load RoleBinding');
+              }
+            }}
+          >
             Edit
           </Button>
-          <Button icon={<DeleteOutlined />}  danger title="Delete RoleBinding">
+          <Button
+            icon={<DeleteOutlined />}
+            danger
+            title="Delete RoleBinding"
+            disabled
+          >
             Delete
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        Role Bindings in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes RoleBindings in the "{memberClusterName}" cluster. RoleBindings grant namespace-scoped permissions.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className={"flex flex-row space-x-4 mb-4"}>
+        <h3 className={"leading-[32px]"}>Namespace:</h3>
+        <Select
+          options={nsOptions}
+          className={"min-w-[200px]"}
+          value={filter.selectedWorkSpace}
+          loading={isNsDataLoading}
+          showSearch
+          allowClear
+          onChange={(v) => {
+            setFilter({
+              ...filter,
+              selectedWorkSpace: v,
+            });
+          }}
+        />
+        <Input.Search
+          placeholder="Search by name"
+          className={"w-[300px]"}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockRoleBindings}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} role bindings`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          columns={columns}
+          dataSource={data?.items || []}
+          rowKey={(record) =>
+            `${record.objectMeta.namespace}-${record.objectMeta.name}`
+          }
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} role bindings`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="RoleBinding details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
         }}
-      />
-      
-      <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded">
-        <p className="text-sm text-orange-800">
-          <strong>Security Note:</strong> RoleBindings grant namespace-scoped permissions. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific RoleBindings.
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+              <div>Labels: {formatLabels(viewDetail)}</div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Role Reference</div>
+              <div>Kind: {viewDetail.roleRef?.kind || '-'}</div>
+              <div>Name: {viewDetail.roleRef?.name || '-'}</div>
+              <div>API Group: {viewDetail.roleRef?.apiGroup || '-'}</div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Subjects</div>
+              <div className="space-y-2">
+                {viewDetail.subjects.map((subject, index) => (
+                  <div key={index} className="border rounded p-2">
+                    <div className="font-medium text-sm mb-1">Subject {index + 1}</div>
+                    <div className="text-xs space-y-1">
+                      <div>Kind: {subject.kind}</div>
+                      <div>Name: {subject.name}</div>
+                      {subject.namespace && <div>Namespace: {subject.namespace}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit RoleBinding (YAML)"
+        placement="right"
+        width={900}
+        open={editDrawerOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditDrawerOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = metadata.name || '';
+                  const namespace = metadata.namespace || '';
+
+                  const ret = await PutResource({
+                    memberClusterName: memberClusterName,
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(
+                      ret.message || 'Failed to update RoleBinding',
+                    );
+                    return;
+                  }
+
+                  setEditDrawerOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update RoleBinding');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }

@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -54,7 +54,39 @@ export async function GetEvents(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
+    IResponse<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      events: Event[];
+    }>
+  >(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterEvents(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/event/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/event`;
+
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
