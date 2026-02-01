@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -65,7 +65,7 @@ export async function GetCustomResourceDefinitions(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -80,7 +80,7 @@ export async function GetCustomResourceDefinitions(params?: {
 }
 
 export async function GetCustomResourceDefinitionDetail(name: string) {
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -104,7 +104,7 @@ export async function GetCustomResources(params: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -124,7 +124,7 @@ export async function GetCustomResourceDetail(params: {
   object: string;
 }) {
   const { namespace, crd, object } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -140,7 +140,7 @@ export async function GetCustomResourceEvents(params: {
   object: string;
 }) {
   const { namespace, crd, object } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {

@@ -16,7 +16,7 @@ limitations under the License.
 
 import {
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
 } from '../base';
 
 export interface AppDeploymentSpec {
@@ -57,21 +57,21 @@ export interface ValidationResponse {
 }
 
 export async function CreateAppDeployment(spec: AppDeploymentSpec) {
-  const resp = await karmadaClient.post<
+  const resp = await karmadaMemberClusterClient.post<
     IResponse<any>
   >('/appdeployment', spec);
   return resp.data;
 }
 
 export async function CreateAppDeploymentFromFile(spec: AppDeploymentFromFileSpec) {
-  const resp = await karmadaClient.post<
+  const resp = await karmadaMemberClusterClient.post<
     IResponse<any>
   >('/appdeploymentfromfile', spec);
   return resp.data;
 }
 
 export async function GetProtocols() {
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       protocols: string[];
     }>
@@ -80,21 +80,21 @@ export async function GetProtocols() {
 }
 
 export async function ValidateImageReference(imageReference: string) {
-  const resp = await karmadaClient.post<
+  const resp = await karmadaMemberClusterClient.post<
     IResponse<ValidationResponse>
   >('/appdeployment/validate/imagereference', { imageReference });
   return resp.data;
 }
 
 export async function ValidateAppName(name: string, namespace?: string) {
-  const resp = await karmadaClient.post<
+  const resp = await karmadaMemberClusterClient.post<
     IResponse<ValidationResponse>
   >('/appdeployment/validate/name', { name, namespace });
   return resp.data;
 }
 
 export async function ValidateProtocol(protocol: string) {
-  const resp = await karmadaClient.post<
+  const resp = await karmadaMemberClusterClient.post<
     IResponse<ValidationResponse>
   >('/appdeployment/validate/protocol', { protocol });
   return resp.data;

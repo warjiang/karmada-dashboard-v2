@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -97,7 +97,7 @@ export async function GetNetworkPolicies(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -116,7 +116,7 @@ export async function GetNetworkPolicyDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -139,7 +139,7 @@ export async function GetIngressClasses(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -154,7 +154,7 @@ export async function GetIngressClasses(params?: {
 }
 
 export async function GetIngressClassDetail(name: string) {
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];

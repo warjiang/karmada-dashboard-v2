@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
@@ -69,7 +69,7 @@ export async function GetPersistentVolumes(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -84,7 +84,7 @@ export async function GetPersistentVolumes(params?: {
 }
 
 export async function GetPersistentVolumeDetail(name: string) {
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -99,7 +99,7 @@ export async function GetPersistentVolumeDetailWithNamespace(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -124,7 +124,7 @@ export async function GetPersistentVolumeClaims(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -143,7 +143,7 @@ export async function GetPersistentVolumeClaimDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -166,7 +166,7 @@ export async function GetStorageClasses(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -181,7 +181,7 @@ export async function GetStorageClasses(params?: {
 }
 
 export async function GetStorageClassDetail(name: string) {
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -192,7 +192,7 @@ export async function GetStorageClassDetail(name: string) {
 }
 
 export async function GetStorageClassPersistentVolumes(name: string) {
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {

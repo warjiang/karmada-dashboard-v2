@@ -18,7 +18,7 @@ import {
   convertDataSelectQuery,
   DataSelectQuery,
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
   ObjectMeta,
   TypeMeta,
 } from '../base';
@@ -113,7 +113,7 @@ export async function GetHorizontalPodAutoscalers(params?: {
   if (keyword) {
     requestData.filterBy = ['name', keyword];
   }
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {
@@ -132,7 +132,7 @@ export async function GetHorizontalPodAutoscalerDetail(params: {
   name: string;
 }) {
   const { namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<
       {
         errors: string[];
@@ -148,7 +148,7 @@ export async function GetHorizontalPodAutoscalersForResource(params: {
   name: string;
 }) {
   const { kind, namespace, name } = params;
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       errors: string[];
       listMeta: {

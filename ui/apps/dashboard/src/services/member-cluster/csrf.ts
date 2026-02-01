@@ -16,7 +16,7 @@ limitations under the License.
 
 import {
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
 } from '../base';
 
 export interface CSRFToken {
@@ -24,7 +24,7 @@ export interface CSRFToken {
 }
 
 export async function GetCSRFToken(action: string) {
-  const resp = await karmadaClient.get<IResponse<CSRFToken>>(
+  const resp = await karmadaMemberClusterClient.get<IResponse<CSRFToken>>(
     `/csrftoken/${action}`
   );
   return resp.data;

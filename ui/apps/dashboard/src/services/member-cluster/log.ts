@@ -16,7 +16,7 @@ limitations under the License.
 
 import {
   IResponse,
-  karmadaClient,
+  karmadaMemberClusterClient,
 } from '../base';
 
 export interface LogSource {
@@ -61,7 +61,7 @@ export async function GetLogs(params: {
   const { namespace, pod, container, ...queryParams } = params;
   const url = container ? `/log/${namespace}/${pod}/${container}` : `/log/${namespace}/${pod}`;
   
-  const resp = await karmadaClient.get<LogDetails>(url, {
+  const resp = await karmadaMemberClusterClient.get<LogDetails>(url, {
     params: queryParams,
   });
   return resp.data;
@@ -80,7 +80,7 @@ export async function DownloadLogs(params: {
 }) {
   const { namespace, pod, container, ...queryParams } = params;
   
-  const resp = await karmadaClient.get<Blob>(`/log/file/${namespace}/${pod}/${container}`, {
+  const resp = await karmadaMemberClusterClient.get<Blob>(`/log/file/${namespace}/${pod}/${container}`, {
     params: queryParams,
     responseType: 'blob',
   });
@@ -94,7 +94,7 @@ export async function GetLogSources(params: {
 }) {
   const { namespace, resourceName, resourceType } = params;
   
-  const resp = await karmadaClient.get<
+  const resp = await karmadaMemberClusterClient.get<
     IResponse<{
       logSources: LogSource[];
     }>
