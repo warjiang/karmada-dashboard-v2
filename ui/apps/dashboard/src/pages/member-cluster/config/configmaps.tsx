@@ -25,7 +25,7 @@ import useNamespace from '../../../hooks/use-namespace.ts';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
-import { GetResource, PutResource } from '@/services/unstructured.ts';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
 
 export default function MemberClusterConfigMaps() {
   const { message: messageApi } = App.useApp();
@@ -195,14 +195,14 @@ export default function MemberClusterConfigMaps() {
             onClick={async () => {
               try {
                 const ret = await GetResource({
+                  memberClusterName: memberClusterName,
                   kind: record.typeMeta.kind,
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
-
-                if (ret.code !== 200) {
+                if (ret.status !== 200) {
                   void messageApi.error(
-                    ret.message || 'Failed to load ConfigMap',
+                    'Failed to load ConfigMap',
                   );
                   return;
                 }
@@ -358,6 +358,7 @@ export default function MemberClusterConfigMaps() {
                   const namespace = metadata.namespace || '';
 
                   const ret = await PutResource({
+                    memberClusterName: memberClusterName,
                     kind,
                     name,
                     namespace,

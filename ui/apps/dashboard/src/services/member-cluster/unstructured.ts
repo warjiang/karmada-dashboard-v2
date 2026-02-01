@@ -26,6 +26,22 @@ export async function GetResource(params: UnstructuredParams) {
   return resp;
 }
 
+
+export async function PutResource(
+  params: UnstructuredParams & {
+    content: Record<string, any>;
+  },
+) {
+  const url = generateUrlForUnstructuredParams(params);
+  const resp = await karmadaMemberClusterClient.put<{
+    data: any;
+    code: number;
+    message: string;
+  }>(url, params.content);
+  return resp.data;
+}
+
+
 interface UnstructuredParams {
   memberClusterName: string;
   kind: string;
