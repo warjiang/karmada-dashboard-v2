@@ -44,6 +44,19 @@ export interface SecretDetail extends Secret {
   keys: string[];
 }
 
+export interface PersistentVolumeClaim {
+  objectMeta: ObjectMeta;
+  typeMeta: TypeMeta;
+  status: string;
+  volume: string;
+  capacity: Record<string, string>;
+  accessModes: string[];
+  storageClass: string;
+}
+
+export interface PersistentVolumeClaimDetail extends PersistentVolumeClaim {
+}
+
 export interface ImagePullSecretSpec {
   name: string;
   namespace: string;
@@ -133,6 +146,48 @@ export async function GetMemberClusterSecretDetail(params: {
         errors: string[];
       } & SecretDetail>(`/clusterapi/${memberClusterName}/api/v1/secret/${namespace}/${name}`);
   return resp;
+}
+
+// Member Cluster PersistentVolumeClaim APIs
+export async function GetMemberClusterPersistentVolumeClaims(params: {
+  memberClusterName: string;
+  namespace?: string;
+  keyword?: string;
+  filterBy?: string[];
+  sortBy?: string[];
+  itemsPerPage?: number;
+  page?: number;
+}) {
+  const { memberClusterName, namespace, keyword, ...queryParams } = params;
+  const url = namespace
+    ? `/clusterapi/${memberClusterName}/api/v1/persistentvolumeclaim/${namespace}`
+    : `/clusterapi/${memberClusterName}/api/v1/persistentvolumeclaim`;
+  const requestData = { ...queryParams } as DataSelectQuery;
+  if (keyword) {
+    requestData.filterBy = ['name', keyword];
+  }
+  const resp = await karmadaMemberClusterClient.get<{
+      errors: string[];
+      listMeta: {
+        totalItems: number;
+      };
+      items: PersistentVolumeClaim[];
+    }>(url, {
+    params: convertDataSelectQuery(requestData),
+  });
+  return resp.data;
+}
+
+export async function GetMemberClusterPersistentVolumeClaimDetail(params: {
+  memberClusterName: string;
+  namespace: string;
+  name: string;
+}) {
+  const { memberClusterName, namespace, name } = params;
+  const resp = await karmadaMemberClusterClient.get<{
+        errors: string[];
+      } & PersistentVolumeClaimDetail>(`/clusterapi/${memberClusterName}/api/v1/persistentvolumeclaim/${namespace}/${name}`);
+  return resp.data;
 }
 
 export async function CreateMemberClusterImagePullSecret(params: {

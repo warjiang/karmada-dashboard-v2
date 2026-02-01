@@ -1,133 +1,101 @@
-import { Table, Tag, Button, Space, Progress } from 'antd';
+import {
+  App,
+  Button,
+  Drawer,
+  Input,
+  Select,
+  Space,
+  Table,
+  TableColumnProps,
+  Tag,
+} from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined, HddOutlined, CloudOutlined } from '@ant-design/icons';
+import React from 'react';
 import { useMemberClusterContext } from '../hooks';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+  PersistentVolumeClaim,
+  PersistentVolumeClaimDetail,
+  GetMemberClusterPersistentVolumeClaimDetail,
+  GetMemberClusterPersistentVolumeClaims,
+} from '@/services/member-cluster/config.ts';
+import useNamespace from '../../../hooks/use-namespace.ts';
+import dayjs from 'dayjs';
+import { stringify, parse } from 'yaml';
+import Editor from '@monaco-editor/react';
+import { GetResource, PutResource } from '@/services/member-cluster/unstructured.ts';
 
 export default function MemberClusterPersistentVolumeClaims() {
+  const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
 
-  // Mock data for demonstration
-  const mockPVCs = [
-    {
-      name: 'database-storage',
-      namespace: 'production',
-      status: 'Bound',
-      volume: 'pv-database-001',
-      capacity: '50Gi',
-      accessModes: ['ReadWriteOnce'],
-      storageClass: 'fast-ssd',
-      age: '15d',
-      mountedPods: ['postgres-0'],
-      usagePercent: 65
+  const [filter, setFilter] = useState<{
+    selectedWorkSpace: string;
+    searchText: string;
+  }>({
+    selectedWorkSpace: '',
+    searchText: '',
+  });
+
+  const { nsOptions, isNsDataLoading } = useNamespace({});
+
+  const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
+  const [viewDetail, setViewDetail] = useState<PersistentVolumeClaimDetail | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const [editDrawerOpen, setEditDrawerOpen] = useState(false);
+  const [editContent, setEditContent] = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  const { data, isLoading } = useQuery({
+    queryKey: [
+      memberClusterName,
+      'GetMemberClusterPersistentVolumeClaims',
+      JSON.stringify(filter),
+    ],
+    queryFn: async () => {
+      const ret = await GetMemberClusterPersistentVolumeClaims({
+        memberClusterName,
+        namespace: filter.selectedWorkSpace,
+        keyword: filter.searchText,
+      });
+      // service returns IResponse<...>
+      return ret;
     },
-    {
-      name: 'webapp-logs',
-      namespace: 'default',
-      status: 'Bound',
-      volume: 'pv-logs-002',
-      capacity: '10Gi',
-      accessModes: ['ReadWriteMany'],
-      storageClass: 'standard',
-      age: '7d',
-      mountedPods: ['webapp-1', 'webapp-2', 'webapp-3'],
-      usagePercent: 42
-    },
-    {
-      name: 'cache-data',
-      namespace: 'cache',
-      status: 'Bound',
-      volume: 'pv-redis-003',
-      capacity: '20Gi',
-      accessModes: ['ReadWriteOnce'],
-      storageClass: 'fast-ssd',
-      age: '20d',
-      mountedPods: ['redis-master-0'],
-      usagePercent: 78
-    },
-    {
-      name: 'backup-storage',
-      namespace: 'backup',
-      status: 'Pending',
-      volume: '',
-      capacity: '100Gi',
-      accessModes: ['ReadWriteOnce'],
-      storageClass: 'slow-hdd',
-      age: '2h',
-      mountedPods: [],
-      usagePercent: 0
-    },
-    {
-      name: 'monitoring-data',
-      namespace: 'monitoring',
-      status: 'Bound',
-      volume: 'pv-prometheus-004',
-      capacity: '30Gi',
-      accessModes: ['ReadWriteOnce'],
-      storageClass: 'standard',
-      age: '12d',
-      mountedPods: ['prometheus-0'],
-      usagePercent: 85
-    },
-    {
-      name: 'shared-files',
-      namespace: 'staging',
-      status: 'Bound',
-      volume: 'pv-shared-005',
-      capacity: '15Gi',
-      accessModes: ['ReadWriteMany'],
-      storageClass: 'standard',
-      age: '5d',
-      mountedPods: ['frontend-1', 'backend-1'],
-      usagePercent: 23
-    }
-  ];
+  });
 
   const getStatusTag = (status: string) => {
-    const statusColors: Record<string, string> = {
-      'Bound': 'success',
-      'Pending': 'processing',
-      'Lost': 'error',
-      'Available': 'default'
+    const statusConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+      Bound: { color: 'success', icon: <HddOutlined /> },
+      Pending: { color: 'processing', icon: <CloudOutlined /> },
+      Lost: { color: 'error', icon: <HddOutlined /> },
+      Available: { color: 'default', icon: <HddOutlined /> },
     };
-    
-    const statusIcons: Record<string, React.ReactNode> = {
-      'Bound': <HddOutlined />,
-      'Pending': <CloudOutlined />,
-      'Lost': <HddOutlined />,
-      'Available': <HddOutlined />
+
+    const config = statusConfig[status] || {
+      color: 'default',
+      icon: <HddOutlined />,
     };
 
     return (
-      <Tag color={statusColors[status] || 'default'} icon={statusIcons[status]}>
+      <Tag color={config.color} icon={config.icon}>
         {status}
-      </Tag>
-    );
-  };
-
-  const getStorageClassTag = (storageClass: string) => {
-    const classColors: Record<string, string> = {
-      'fast-ssd': 'red',
-      'standard': 'blue',
-      'slow-hdd': 'orange'
-    };
-
-    return (
-      <Tag color={classColors[storageClass] || 'default'}>
-        {storageClass}
       </Tag>
     );
   };
 
   const formatAccessModes = (modes: string[]) => {
     const modeAbbrev: Record<string, string> = {
-      'ReadWriteOnce': 'RWO',
-      'ReadOnlyMany': 'ROX',
-      'ReadWriteMany': 'RWX'
+      ReadWriteOnce: 'RWO',
+      ReadOnlyMany: 'ROX',
+      ReadWriteMany: 'RWX',
     };
 
     return (
       <div className="flex gap-1">
         {modes.map((mode, index) => (
-          <Tag key={index}  color="geekblue">
+          <Tag key={index} color="geekblue">
             {modeAbbrev[mode] || mode}
           </Tag>
         ))}
@@ -135,46 +103,14 @@ export default function MemberClusterPersistentVolumeClaims() {
     );
   };
 
-  const formatMountedPods = (pods: string[]) => {
-    if (pods.length === 0) {
-      return <span className="text-gray-400">None</span>;
+  const formatCapacity = (capacity: Record<string, string>) => {
+    if (!capacity || Object.keys(capacity).length === 0) {
+      return <span className="text-gray-400">-</span>;
     }
     
-    if (pods.length === 1) {
-      return <code className="text-xs">{pods[0]}</code>;
-    }
-    
-    return (
-      <div className="flex items-center gap-1">
-        <code className="text-xs">{pods[0]}</code>
-        <Tag  color="cyan">+{pods.length - 1}</Tag>
-      </div>
-    );
-  };
-
-  const getUsageProgress = (usagePercent: number, status: string) => {
-    if (status !== 'Bound') {
-      return <span className="text-gray-400">N/A</span>;
-    }
-
-    const getStatus = () => {
-      if (usagePercent >= 90) return 'exception';
-      if (usagePercent >= 80) return 'active';
-      return 'success';
-    };
-
-    return (
-      <div className="flex items-center gap-2">
-        <Progress
-          percent={usagePercent}
-         
-          status={getStatus()}
-          showInfo={false}
-          style={{ width: 60 }}
-        />
-        <span className="text-xs">{usagePercent}%</span>
-      </div>
-    );
+    // Get the storage value (usually storage key)
+    const storageValue = capacity.storage || Object.values(capacity)[0] || '-';
+    return <code className="text-xs">{storageValue}</code>;
   };
 
   const formatVolume = (volume: string, status: string) => {
@@ -184,117 +120,307 @@ export default function MemberClusterPersistentVolumeClaims() {
     return <code className="text-xs">{volume}</code>;
   };
 
-  const columns = [
+  const getStorageClassTag = (storageClass: string) => {
+    if (!storageClass) {
+      return <span className="text-gray-400">-</span>;
+    }
+    
+    const classColors: Record<string, string> = {
+      'fast-ssd': 'red',
+      'standard': 'blue',
+      'slow-hdd': 'orange',
+    };
+
+    const color = classColors[storageClass] || 'default';
+    return (
+      <Tag color={color}>
+        {storageClass}
+      </Tag>
+    );
+  };
+
+  const columns: TableColumnProps<PersistentVolumeClaim>[] = [
     {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      render: (name: string) => <strong>{name}</strong>
+      render: (_: string, record: PersistentVolumeClaim) => (
+        <strong>{record.objectMeta.name}</strong>
+      ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
-      key: 'namespace'
+      key: 'namespace',
+      render: (_: string, record: PersistentVolumeClaim) => record.objectMeta.namespace,
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => getStatusTag(status)
+      render: (_: string, record: PersistentVolumeClaim) => getStatusTag(record.status),
     },
     {
       title: 'Volume',
       key: 'volume',
-      render: (record: any) => formatVolume(record.volume, record.status)
+      render: (_: unknown, record: PersistentVolumeClaim) => formatVolume(record.volume, record.status),
     },
     {
       title: 'Capacity',
       dataIndex: 'capacity',
       key: 'capacity',
-      render: (capacity: string) => <code className="text-xs">{capacity}</code>
+      render: (_: unknown, record: PersistentVolumeClaim) => formatCapacity(record.capacity),
     },
     {
       title: 'Access Modes',
       dataIndex: 'accessModes',
       key: 'accessModes',
-      render: (modes: string[]) => formatAccessModes(modes)
+      render: (_: unknown, record: PersistentVolumeClaim) => formatAccessModes(record.accessModes),
     },
     {
       title: 'Storage Class',
       dataIndex: 'storageClass',
       key: 'storageClass',
-      render: (storageClass: string) => getStorageClassTag(storageClass)
-    },
-    {
-      title: 'Usage',
-      key: 'usage',
-      render: (record: any) => getUsageProgress(record.usagePercent, record.status)
-    },
-    {
-      title: 'Mounted Pods',
-      dataIndex: 'mountedPods',
-      key: 'mountedPods',
-      render: (pods: string[]) => formatMountedPods(pods)
+      render: (_: unknown, record: PersistentVolumeClaim) => getStorageClassTag(record.storageClass),
     },
     {
       title: 'Age',
       dataIndex: 'age',
-      key: 'age'
+      key: 'age',
+      render: (_: string, record: PersistentVolumeClaim) => {
+        const create = dayjs(record.objectMeta.creationTimestamp);
+        return create.fromNow();
+      },
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: PersistentVolumeClaim) => (
         <Space>
-          <Button icon={<EyeOutlined />}  title="View PVC details">
+          <Button
+            icon={<EyeOutlined />}
+            title="View PVC details"
+            onClick={async () => {
+              setViewLoading(true);
+              try {
+                const detailResp = await GetMemberClusterPersistentVolumeClaimDetail({
+                  memberClusterName,
+                  namespace: record.objectMeta.namespace,
+                  name: record.objectMeta.name,
+                });
+
+                setViewDetail(detailResp as PersistentVolumeClaimDetail);
+                setViewDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load PersistentVolumeClaim');
+              } finally {
+                setViewLoading(false);
+              }
+            }}
+          >
             View
           </Button>
-          <Button icon={<EditOutlined />}  title="Edit PVC">
+          <Button
+            icon={<EditOutlined />}
+            title="Edit PVC"
+            onClick={async () => {
+              try {
+                const ret = await GetResource({
+                  memberClusterName: memberClusterName,
+                  kind: record.typeMeta.kind,
+                  name: record.objectMeta.name,
+                  namespace: record.objectMeta.namespace,
+                });
+                if (ret.status !== 200) {
+                  void messageApi.error(
+                    'Failed to load PersistentVolumeClaim',
+                  );
+                  return;
+                }
+
+                setEditContent(stringify(ret.data));
+                setEditDrawerOpen(true);
+              } catch {
+                void messageApi.error('Failed to load PersistentVolumeClaim');
+              }
+            }}
+          >
             Edit
           </Button>
-          <Button 
-            icon={<DeleteOutlined />} 
-             
-            danger 
+          <Button
+            icon={<DeleteOutlined />}
+            danger
             title="Delete PVC"
-            disabled={record.mountedPods.length > 0}
+            disabled
           >
             Delete
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-semibold mb-4">
-        Persistent Volume Claims in Member Cluster: {memberClusterName}
-      </h2>
-      <div className="mb-4 text-sm text-gray-600">
-        View and manage Kubernetes Persistent Volume Claims in the "{memberClusterName}" cluster. PVCs request storage resources.
+    <div className="h-full w-full flex flex-col p-4">
+      <div className={"flex flex-row space-x-4 mb-4"}>
+        <h3 className={"leading-[32px]"}>Namespace:</h3>
+        <Select
+          options={nsOptions}
+          className={"min-w-[200px]"}
+          value={filter.selectedWorkSpace}
+          loading={isNsDataLoading}
+          showSearch
+          allowClear
+          onChange={(v) => {
+            setFilter({
+              ...filter,
+              selectedWorkSpace: v,
+            });
+          }}
+        />
+        <Input.Search
+          placeholder="Search by name"
+          className={"w-[300px]"}
+          onPressEnter={(e) => {
+            const input = e.currentTarget.value;
+            setFilter({
+              ...filter,
+              searchText: input,
+            });
+          }}
+        />
       </div>
-      
-      <Table
-        columns={columns}
-        dataSource={mockPVCs}
-        rowKey="name"
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} persistent volume claims`
+
+      <div className="flex-1 flex flex-col">
+        <Table
+          columns={columns}
+          dataSource={data?.items || []}
+          rowKey={(record) =>
+            `${record.objectMeta.namespace}-${record.objectMeta.name}`
+          }
+          pagination={{
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} of ${total} persistent volume claims`,
+          }}
+          loading={isLoading}
+        />
+      </div>
+
+      <Drawer
+        title="PersistentVolumeClaim details"
+        placement="right"
+        width={800}
+        open={viewDrawerOpen}
+        onClose={() => {
+          setViewDrawerOpen(false);
+          setViewDetail(null);
         }}
-      />
-      
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> This is a placeholder implementation. The member cluster name "{memberClusterName}" 
-          is successfully passed from the parent route and can be used for API calls to fetch cluster-specific PVCs.
-          <br />
-          <strong>Access Modes:</strong> RWO (ReadWriteOnce), ROX (ReadOnlyMany), RWX (ReadWriteMany)
-        </p>
-      </div>
+        destroyOnClose
+      >
+        {viewLoading && <div>Loading...</div>}
+        {!viewLoading && viewDetail && (
+          <div className="space-y-4">
+            <div>
+              <div className="font-semibold mb-2">Basic Info</div>
+              <div>Name: {viewDetail.objectMeta?.name}</div>
+              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
+              <div>Status: {getStatusTag(viewDetail.status)}</div>
+              <div>Volume: {formatVolume(viewDetail.volume, viewDetail.status)}</div>
+              <div>Capacity: {formatCapacity(viewDetail.capacity)}</div>
+              <div>
+                Created:{' '}
+                {viewDetail.objectMeta?.creationTimestamp
+                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
+                      'YYYY-MM-DD HH:mm:ss',
+                    )
+                  : '-'}
+              </div>
+            </div>
+            <div>
+              <div className="font-semibold mb-2">Storage Details</div>
+              <div>Access Modes: {formatAccessModes(viewDetail.accessModes)}</div>
+              <div>Storage Class: {getStorageClassTag(viewDetail.storageClass)}</div>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title="Edit PersistentVolumeClaim (YAML)"
+        placement="right"
+        width={900}
+        open={editDrawerOpen}
+        onClose={() => {
+          if (!editSubmitting) {
+            setEditDrawerOpen(false);
+            setEditContent('');
+          }
+        }}
+        destroyOnClose
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              loading={editSubmitting}
+              onClick={async () => {
+                setEditSubmitting(true);
+                try {
+                  const yamlObject = parse(editContent) as Record<string, any>;
+                  const kind = (yamlObject.kind || '') as string;
+                  const metadata = (yamlObject.metadata || {}) as {
+                    name?: string;
+                    namespace?: string;
+                  };
+                  const name = metadata.name || '';
+                  const namespace = metadata.namespace || '';
+
+                  const ret = await PutResource({
+                    memberClusterName: memberClusterName,
+                    kind,
+                    name,
+                    namespace,
+                    content: yamlObject,
+                  });
+
+                  if (ret.code !== 200) {
+                    void messageApi.error(
+                      ret.message || 'Failed to update PersistentVolumeClaim',
+                    );
+                    return;
+                  }
+
+                  setEditDrawerOpen(false);
+                  setEditContent('');
+                } catch {
+                  void messageApi.error('Failed to update PersistentVolumeClaim');
+                } finally {
+                  setEditSubmitting(false);
+                }
+              }}
+            >
+              Save
+            </Button>
+          </Space>
+        }
+      >
+        <Editor
+          height="600px"
+          defaultLanguage="yaml"
+          value={editContent}
+          theme="vs"
+          options={{
+            theme: 'vs',
+            lineNumbers: 'on',
+            fontSize: 14,
+            minimap: { enabled: false },
+            wordWrap: 'on',
+          }}
+          onChange={(value) => setEditContent(value || '')}
+        />
+      </Drawer>
     </div>
   );
 }
