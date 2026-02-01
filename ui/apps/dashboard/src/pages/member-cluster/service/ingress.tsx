@@ -1,6 +1,6 @@
 import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps, Tag, Tooltip } from 'antd';
 import { EditOutlined, EyeOutlined, LinkOutlined, LockOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
@@ -10,7 +10,6 @@ import {
   Ingress,
 } from '@/services/member-cluster/service';
 import {Event} from '@/services/member-cluster/event'
-import useNamespace from '@/hooks/use-namespace';
 import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
@@ -27,7 +26,7 @@ export default function MemberClusterIngress() {
     selectedWorkSpace: '',
     searchText: '',
   });
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useMemberClusterNamespace({memberClusterName});
 
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<Ingress | null>(null);

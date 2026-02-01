@@ -1,6 +1,6 @@
 import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
 import { EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { WorkloadKind } from '@/services';
 import { useState } from 'react';
@@ -12,7 +12,6 @@ import {
   WorkloadDetail,
   WorkloadEvent,
 } from '@/services/member-cluster/workload';
-import useNamespace from '@/hooks/use-namespace';
 import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
@@ -31,7 +30,9 @@ export default function MemberClusterJobs() {
     selectedWorkSpace: '',
     searchText: '',
   });
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useMemberClusterNamespace({
+    memberClusterName,
+  });
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
   const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);

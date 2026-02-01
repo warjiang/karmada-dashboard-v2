@@ -11,7 +11,7 @@ import {
   Tooltip,
 } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined, TeamOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext,useMemberClusterNamespace } from '@/hooks';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -21,7 +21,6 @@ import {
   RoleRef,
   Subject,
 } from '@/services/member-cluster/rbac';
-import useNamespace from '../../../hooks/use-namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
@@ -39,7 +38,7 @@ export default function MemberClusterRoleBindings() {
     searchText: '',
   });
 
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useMemberClusterNamespace({memberClusterName});
 
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<RoleBinding | null>(null);

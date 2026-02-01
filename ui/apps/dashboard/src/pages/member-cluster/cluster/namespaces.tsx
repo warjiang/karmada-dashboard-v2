@@ -18,7 +18,7 @@ import {
 } from '@ant-design/icons';
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext } from '@/hooks';
 import {
   Namespace,
   GetMemberClusterNamespaces,

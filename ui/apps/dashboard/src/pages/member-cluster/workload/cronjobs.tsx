@@ -1,6 +1,6 @@
 import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
 import { EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { WorkloadKind } from '@/services';
 import { useState } from 'react';
@@ -12,7 +12,6 @@ import {
   WorkloadDetail,
   WorkloadEvent,
 } from '@/services/member-cluster/workload';
-import useNamespace from '@/hooks/use-namespace';
 import i18nInstance from '@/utils/i18n';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
@@ -31,7 +30,7 @@ export default function MemberClusterCronJobs() {
     selectedWorkSpace: '',
     searchText: '',
   });
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useMemberClusterNamespace({memberClusterName});
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
   const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);
@@ -138,13 +137,14 @@ export default function MemberClusterCronJobs() {
             onClick={async () => {
               try {
                 const ret = await GetResource({
+                  memberClusterName,
                   kind: record.typeMeta.kind,
                   name: record.objectMeta.name,
                   namespace: record.objectMeta.namespace,
                 });
 
-                if (ret.code !== 200) {
-                  void messageApi.error(ret.message || 'Failed to load CronJob');
+                if (ret.status !== 200) {
+                  void messageApi.error('Failed to load CronJob');
                   return;
                 }
 
@@ -308,6 +308,7 @@ export default function MemberClusterCronJobs() {
                   const namespace = metadata.namespace || '';
 
                   const ret = await PutResource({
+                    memberClusterName,
                     kind,
                     name,
                     namespace,

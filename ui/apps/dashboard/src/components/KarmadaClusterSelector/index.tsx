@@ -1,10 +1,10 @@
 import { Select, Tag } from 'antd';
-import { useClusters } from '@/hooks/useCluster.ts';
+import { useClusters, useCluster } from '@/hooks';
 import { useNavigate, useParams } from 'react-router-dom';
 
 export const KarmadaClusterSelector = () => {
   const { data = [] } = useClusters();
-  // const { cluster, setCluster } = useCluster();
+  const { setCurrentCluster } = useCluster();
   const navigate = useNavigate();
   const params = useParams<{
     memberCluster: string;
@@ -14,6 +14,7 @@ export const KarmadaClusterSelector = () => {
       navigate('/overview');
       return;
     }
+    setCurrentCluster(value)
     navigate(`/member-cluster/${value}/overview`);
   };
 

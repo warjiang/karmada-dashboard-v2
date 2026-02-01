@@ -20,7 +20,7 @@ import {
   DatabaseOutlined,
 } from '@ant-design/icons';
 import React from 'react';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -29,7 +29,6 @@ import {
   Secret,
   SecretDetail,
 } from '@/services/member-cluster/config';
-import useNamespace from '@/hooks/use-namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
@@ -48,7 +47,7 @@ export default function MemberClusterSecrets() {
     searchText: '',
   });
 
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useMemberClusterNamespace({memberClusterName});
 
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<SecretDetail | null>(null);

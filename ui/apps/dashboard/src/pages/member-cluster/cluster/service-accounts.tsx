@@ -1,10 +1,9 @@
 import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps, Tag, Tooltip } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined, SafetyCertificateOutlined, KeyOutlined } from '@ant-design/icons';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { ServiceAccount, GetMemberClusterServiceAccount, LocalObjectReference } from '@/services/member-cluster/serviceaccount';
-import useNamespace from '../../../hooks/use-namespace';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
@@ -30,7 +29,7 @@ export default function MemberClusterServiceAccounts() {
   const [editContent, setEditContent] = useState('');
   const [editSubmitting, setEditSubmitting] = useState(false);
 
-  const { nsOptions, isNsDataLoading } = useNamespace({});
+  const { nsOptions, isNsDataLoading } = useMemberClusterNamespace({memberClusterName});
 
   const { data, isLoading } = useQuery({
     queryKey: ['GetMemberClusterServiceAccounts', memberClusterName, filter],

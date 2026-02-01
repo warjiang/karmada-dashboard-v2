@@ -1,10 +1,9 @@
-import { useMemberClusterContext } from './hooks';
+import { useMemberClusterContext } from '@/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { GetClusterDetail, ClusterDetail } from '@/services/cluster';
 
 export default function MemberClusterOverview() {
   const { memberClusterName } = useMemberClusterContext();
-
   const { data: clusterResp, isLoading } = useQuery({
     queryKey: ['GetClusterDetail', memberClusterName],
     queryFn: async () => {
@@ -13,14 +12,14 @@ export default function MemberClusterOverview() {
     },
   });
 
-  const cluster: ClusterDetail | undefined = clusterResp?.data;
+  const clusterDetail: ClusterDetail | undefined = clusterResp?.data;
 
-  const nodeCount = cluster?.nodeSummary.totalNum ?? 0;
-  const totalPods = cluster?.allocatedResources.allocatedPods ?? 0;
-  const cpuUsage = cluster?.allocatedResources.cpuFraction ?? null;
-  const memoryUsage = cluster?.allocatedResources.memoryFraction ?? null;
-  const kubeVersion = cluster?.kubernetesVersion ?? '-';
-  const syncMode = cluster?.syncMode ?? '-';
+  const nodeCount = clusterDetail?.nodeSummary.totalNum ?? 0;
+  const totalPods = clusterDetail?.allocatedResources.allocatedPods ?? 0;
+  const cpuUsage = clusterDetail?.allocatedResources.cpuFraction ?? null;
+  const memoryUsage = clusterDetail?.allocatedResources.memoryFraction ?? null;
+  const kubeVersion = clusterDetail?.kubernetesVersion ?? '-';
+  const syncMode = clusterDetail?.syncMode ?? '-';
   const loading = isLoading;
 
   const formatPercentage = (value: number | null) =>

@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from 'antd';
 import { EyeOutlined, EditOutlined, DeleteOutlined, TeamOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import { useMemberClusterContext } from '../hooks';
+import { useMemberClusterContext } from '@/hooks';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {

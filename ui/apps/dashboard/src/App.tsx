@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { ClusterContext } from "@/hooks/useCluster.ts";
+import { ClusterContext } from "@/hooks";
 import { useState } from "react";
 import "./App.css";
 import Router from "./routes";
@@ -53,7 +53,10 @@ function App() {
     >
       <AntdApp>
         <QueryClientProvider client={queryClient}>
-          <ClusterContext.Provider value={{ cluster, setCluster }}>
+          <ClusterContext.Provider value={{ 
+            currentCluster: cluster,
+            setCurrentCluster: setCluster,
+           }}>
             <AuthProvider>
               <HelmetProvider>
                 <Helmet>
