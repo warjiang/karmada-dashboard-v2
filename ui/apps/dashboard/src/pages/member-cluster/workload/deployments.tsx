@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { App, Button, Drawer, Input, Select, Space, Table, TableColumnProps } from 'antd';
+import { App, Button, Drawer, Input, Select, Space, Switch, Table, TableColumnProps } from 'antd';
 import { Icons } from '@/components/icons';
 import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { WorkloadKind } from '@/services/base';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   GetMemberClusterWorkloadDetail,
   GetMemberClusterWorkloadEvents,
@@ -33,6 +33,8 @@ import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
 import Editor from '@monaco-editor/react';
 import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
+import { GetMemberClusterPods, Pod } from '@/services/member-cluster/pod';
+import { GetLogs, LogDetails } from '@/services/member-cluster/log';
 
 export default function MemberClusterDeployments() {
   const { message: messageApi } = App.useApp();
@@ -50,6 +52,15 @@ export default function MemberClusterDeployments() {
   const [viewDrawerOpen, setViewDrawerOpen] = useState(false);
   const [viewDetail, setViewDetail] = useState<WorkloadDetail | null>(null);
   const [viewEvents, setViewEvents] = useState<WorkloadEvent[]>([]);
+  const [viewPods, setViewPods] = useState<Pod[]>([]);
+  const [logDrawerOpen, setLogDrawerOpen] = useState(false);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logDetails, setLogDetails] = useState<LogDetails | null>(null);
+  const [logPod, setLogPod] = useState<Pod | null>(null);
+  const [logAutoRefresh, setLogAutoRefresh] = useState<boolean>(false);
+  const [logAutoScroll, setLogAutoScroll] = useState<boolean>(true);
+  const logScrollRef = useRef<HTMLPreElement | null>(null);
+  const logRefreshTimerRef = useRef<number | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
 
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -67,6 +78,63 @@ export default function MemberClusterDeployments() {
       return workloads.data;
     },
   });
+
+  const fetchLogs = useCallback(
+    async (pod: Pod | null) => {
+      if (!pod) return;
+      setLogLoading(true);
+      try {
+        const ret = await GetLogs({
+          memberClusterName,
+          namespace: pod.objectMeta.namespace,
+          pod: pod.objectMeta.name,
+          tailLines: 200,
+          timestamps: true,
+        });
+        setLogDetails(ret.data);
+      } catch {
+        void messageApi.error('Failed to load pod logs');
+      } finally {
+        setLogLoading(false);
+      }
+    },
+    [messageApi],
+  );
+
+  useEffect(() => {
+    if (logAutoRefresh && logDrawerOpen && logPod) {
+      const timer = window.setInterval(() => {
+        void fetchLogs(logPod);
+      }, 5000);
+      logRefreshTimerRef.current = timer;
+      return () => {
+        window.clearInterval(timer);
+        logRefreshTimerRef.current = null;
+      };
+    }
+
+    if (!logAutoRefresh && logRefreshTimerRef.current) {
+      window.clearInterval(logRefreshTimerRef.current);
+      logRefreshTimerRef.current = null;
+    }
+    return undefined;
+  }, [logAutoRefresh, logDrawerOpen, logPod, fetchLogs]);
+
+  useEffect(() => {
+    if (!logAutoScroll || !logScrollRef.current) {
+      return;
+    }
+
+    const hasContent = Boolean(
+      logDetails?.podLogs?.logs?.length || logDetails?.logs?.length,
+    );
+    if (!hasContent) {
+      return;
+    }
+
+    const el = logScrollRef.current;
+    el.scrollTop = el.scrollHeight;
+  }, [logAutoScroll, logDetails]);
 
   // placeholder for future conditional fetch logic
   // const enableViewFetch = useMemo(() => {
@@ -128,20 +196,27 @@ export default function MemberClusterDeployments() {
             onClick={async () => {
               setViewLoading(true);
               try {
-                const detailResp = await GetMemberClusterWorkloadDetail({
-                  memberClusterName,
-                  namespace: record.objectMeta.namespace,
-                  name: record.objectMeta.name,
-                  kind: record.typeMeta.kind as WorkloadKind,
-                });
-                const eventsRet = await GetMemberClusterWorkloadEvents({
-                  memberClusterName,
-                  namespace: record.objectMeta.namespace,
-                  name: record.objectMeta.name,
-                  kind: record.typeMeta.kind as WorkloadKind,
-                });
+                const [detailResp, eventsRet, podsRet] = await Promise.all([
+                  GetMemberClusterWorkloadDetail({
+                    memberClusterName,
+                    namespace: record.objectMeta.namespace,
+                    name: record.objectMeta.name,
+                    kind: record.typeMeta.kind as WorkloadKind,
+                  }),
+                  GetMemberClusterWorkloadEvents({
+                    memberClusterName,
+                    namespace: record.objectMeta.namespace,
+                    name: record.objectMeta.name,
+                    kind: record.typeMeta.kind as WorkloadKind,
+                  }),
+                  GetMemberClusterPods({
+                    memberClusterName,
+                    namespace: record.objectMeta.namespace,
+                  }),
+                ]);
                 setViewDetail((detailResp?.data ?? ({} as any)) as WorkloadDetail);
                 setViewEvents(eventsRet?.data?.events || []);
+                setViewPods(podsRet?.data?.pods || []);
                 setViewDrawerOpen(true);
               } finally {
                 setViewLoading(false);
@@ -248,6 +323,7 @@ export default function MemberClusterDeployments() {
           setViewDrawerOpen(false);
           setViewDetail(null);
           setViewEvents([]);
+          setViewPods([]);
         }}
         destroyOnClose
       >
@@ -275,10 +351,75 @@ export default function MemberClusterDeployments() {
             </div>
             <div>
               <div className="font-semibold mb-2">Pods</div>
-              <div>
+              <div className="mb-2">
                 Running: {viewDetail.pods?.running} / Desired:{' '}
                 {viewDetail.pods?.desired}
               </div>
+              <Table
+                size="small"
+                rowKey={(record) => record.objectMeta.name}
+                columns={[
+                  {
+                    title: 'Name',
+                    dataIndex: ['objectMeta', 'name'],
+                    key: 'name',
+                    render: (name: string) => <span className="text-xs">{name}</span>,
+                  },
+                  {
+                    title: 'Status',
+                    dataIndex: 'status',
+                    key: 'status',
+                    render: (status: string) => <span className="text-xs">{status}</span>,
+                  },
+                  {
+                    title: 'Phase',
+                    dataIndex: 'podPhase',
+                    key: 'podPhase',
+                    render: (phase: string) => <span className="text-xs">{phase}</span>,
+                  },
+                  {
+                    title: 'Pod IP',
+                    dataIndex: 'podIP',
+                    key: 'podIP',
+                    render: (ip: string) => <span className="text-xs">{ip || '-'}</span>,
+                  },
+                  {
+                    title: 'Node',
+                    dataIndex: 'nodeName',
+                    key: 'nodeName',
+                    render: (node: string) => <span className="text-xs">{node || '-'}</span>,
+                  },
+                  {
+                    title: 'Restarts',
+                    dataIndex: 'restartCount',
+                    key: 'restartCount',
+                    render: (count: number) => <span className="text-xs">{count || 0}</span>,
+                  },
+                  {
+                    title: 'Actions',
+                    key: 'actions',
+                    render: (_: unknown, record: Pod) => (
+                      <Button
+                        size="small"
+                        icon={<Icons.terminal width={14} height={14} />}
+                        title="View Pod logs"
+                        onClick={async () => {
+                          setLogPod(record);
+                          setLogDrawerOpen(true);
+                          setLogDetails(null);
+                          void fetchLogs(record);
+                        }}
+                      >
+                        Logs
+                      </Button>
+                    ),
+                  },
+                ]}
+                dataSource={viewPods}
+                pagination={false}
+                scroll={{ y: 300 }}
+                locale={{ emptyText: 'No pods found' }}
+              />
             </div>
             <div>
               <div className="font-semibold mb-2">Events</div>
@@ -297,6 +438,63 @@ export default function MemberClusterDeployments() {
                 {!viewEvents.length && <div>No events</div>}
               </div>
             </div>
+          </div>
+        )}
+      </Drawer>
+
+      <Drawer
+        title={
+          logPod
+            ? `Logs: ${logPod.objectMeta.namespace}/${logPod.objectMeta.name}`
+            : 'Pod logs'
+        }
+        placement="right"
+        width={800}
+        open={logDrawerOpen}
+        onClose={() => {
+          setLogDrawerOpen(false);
+          setLogDetails(null);
+          setLogPod(null);
+          setLogAutoRefresh(false);
+        }}
+        destroyOnClose
+      >
+        <div className="mb-3 flex items-center gap-4 text-xs">
+          <span className="flex items-center gap-2">
+            自动刷新:
+            <Switch
+              size="small"
+              checked={logAutoRefresh}
+              onChange={(checked) => setLogAutoRefresh(checked)}
+            />
+          </span>
+          <span className="flex items-center gap-2">
+            自动滚动到底部:
+            <Switch
+              size="small"
+              checked={logAutoScroll}
+              onChange={(checked) => setLogAutoScroll(checked)}
+            />
+          </span>
+        </div>
+
+        {logLoading && <div>Loading logs...</div>}
+        {!logLoading && !logDetails && <div>No logs</div>}
+        {!logLoading && logDetails && (
+          <div className="h-full flex flex-col">
+            <div className="mb-2 text-xs text-gray-500">
+              Container: {logDetails.info?.containerName || '-'} | From:{' '}
+              {logDetails.info?.fromDate || '-'} | To: {logDetails.info?.toDate || '-'}{' '}
+              {logDetails.info?.truncated && '(truncated)'}
+            </div>
+            <pre
+              ref={logScrollRef}
+              className="flex-1 overflow-auto bg-black text-green-400 text-xs p-2 rounded"
+            >
+              {logDetails.podLogs?.logs?.join('\n') ||
+                logDetails.logs?.map((l) => `${l.timestamp} ${l.content}`).join('\n') ||
+                'No log content'}
+            </pre>
           </div>
         )}
       </Drawer>

@@ -45,6 +45,7 @@ export interface PodLogs {
 }
 
 export async function GetLogs(params: {
+  memberClusterName: string;
   namespace: string;
   pod: string;
   container?: string;
@@ -55,8 +56,9 @@ export async function GetLogs(params: {
   tailLines?: number;
   limitBytes?: number;
 }) {
-  const { namespace, pod, container, ...queryParams } = params;
-  const url = container ? `/log/${namespace}/${pod}/${container}` : `/log/${namespace}/${pod}`;
+  const { memberClusterName, namespace, pod, container, ...queryParams } = params;
+  console.log('GetLogs')
+  const url = container ? `/clusterapi/${memberClusterName}/api/v1/log/${namespace}/${pod}/${container}` : `/clusterapi/${memberClusterName}/api/v1/log/${namespace}/${pod}`;
 
   const resp = await karmadaMemberClusterClient.get<LogDetails>(url, {
     params: queryParams,
@@ -65,6 +67,7 @@ export async function GetLogs(params: {
 }
 
 export async function DownloadLogs(params: {
+  memberClusterName: string;
   namespace: string;
   pod: string;
   container: string;
@@ -75,9 +78,9 @@ export async function DownloadLogs(params: {
   tailLines?: number;
   limitBytes?: number;
 }) {
-  const { namespace, pod, container, ...queryParams } = params;
+  const { memberClusterName, namespace, pod, container, ...queryParams } = params;
 
-  const resp = await karmadaMemberClusterClient.get<Blob>(`/log/file/${namespace}/${pod}/${container}`, {
+  const resp = await karmadaMemberClusterClient.get<Blob>(`/clusterapi/${memberClusterName}/api/v1/log/file/${namespace}/${pod}/${container}`, {
     params: queryParams,
     responseType: 'blob',
   });
@@ -85,14 +88,15 @@ export async function DownloadLogs(params: {
 }
 
 export async function GetLogSources(params: {
+  memberClusterName: string;
   namespace: string;
   resourceName: string;
   resourceType: string;
 }) {
-  const { namespace, resourceName, resourceType } = params;
+  const { memberClusterName, namespace, resourceName, resourceType } = params;
 
   const resp = await karmadaMemberClusterClient.get<{
     logSources: LogSource[];
-  }>(`/log/source/${namespace}/${resourceName}/${resourceType}`);
+  }>(`/clusterapi/${memberClusterName}/api/v1/log/source/${namespace}/${resourceName}/${resourceType}`);
   return resp;
 }
