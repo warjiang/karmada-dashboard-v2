@@ -27,11 +27,11 @@ export const KarmadaClusterSelector = () => {
   }>();
   const handleChange = (value: string) => {
     if (value === 'control-plane') {
-      navigate('/overview');
+      void navigate('/overview');
       return;
     }
-    setCurrentCluster(value)
-    navigate(`/member-cluster/${value}/overview`);
+    void setCurrentCluster(value)
+    void navigate(`/member-cluster/${value}/overview`);
   };
 
   return (
