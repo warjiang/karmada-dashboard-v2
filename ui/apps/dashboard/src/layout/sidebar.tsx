@@ -39,7 +39,7 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
   const onClick: MenuProps['onClick'] = (e) => {
     const url = flattenRoutes[e.key];
     if (!url) return;
-    navigate(url);
+    void navigate(url);
   };
   const matches = useMatches();
   const selectKeys = useMemo(() => {

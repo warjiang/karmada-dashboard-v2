@@ -132,7 +132,7 @@ const MemberClusterSidebar: FC<MemberClusterSidebarProps> = () => {
 
   const handleMenuClick = ({ key }: { key: string }) => {
     const basePath = `/member-cluster/${memberClusterName}`;
-    navigate(`${basePath}/${key}`);
+    void navigate(`${basePath}/${key}`);
   };
 
   return (

@@ -172,11 +172,11 @@ spec:
     try {
         // Try waiting for success message
         await expect(page.locator('text=Updated')).toBeVisible({ timeout: 3000 });
-    } catch (e) {
+    } catch {
         try {
             // If no success message, wait for dialog to close
             await page.waitForSelector('[role="dialog"]', { state: 'detached', timeout: 3000 });
-        } catch (e2) {
+        } catch {
             // If dialog close also failed, check if page still exists
             try {
                 const isPageActive = await page.evaluate(() => document.readyState);
@@ -184,7 +184,7 @@ spec:
                 if (isPageActive === 'complete') {
                     // Edit operation may have succeeded
                 }
-            } catch (e3) {
+            } catch {
                 // Page appears to be closed or crashed
             }
         }

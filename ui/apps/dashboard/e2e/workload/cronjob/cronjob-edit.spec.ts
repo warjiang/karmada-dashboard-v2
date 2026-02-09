@@ -143,8 +143,11 @@ spec:
     }
 
     // Modify YAML content (change schedule from every 5 minutes to every 10 minutes)
-    const yamlObject = parse(yamlContent);
-    _.set(yamlObject, 'spec.schedule', '*/10 * * * *');
+    const yamlObject: unknown = parse(yamlContent);
+    if (typeof yamlObject !== 'object' || yamlObject === null) {
+        throw new Error('Failed to parse cronjob YAML into an object');
+    }
+    _.set(yamlObject as Record<string, unknown>, 'spec.schedule', '*/10 * * * *');
     const modifiedYaml = stringify(yamlObject);
 
     // Set modified YAML content and trigger React onChange callback
@@ -158,11 +161,11 @@ spec:
     try {
         // Try waiting for success message
         await expect(page.locator('text=Updated')).toBeVisible({ timeout: 3000 });
-    } catch (e) {
+    } catch {
         try {
             // If no success message, wait for dialog to close
             await page.waitForSelector('[role="dialog"]', { state: 'detached', timeout: 3000 });
-        } catch (e2) {
+        } catch {
             // If dialog close also failed, check if page still exists
             try {
                 const isPageActive = await page.evaluate(() => document.readyState);
@@ -170,7 +173,7 @@ spec:
                 if (isPageActive === 'complete') {
                     // Edit operation may have succeeded
                 }
-            } catch (e3) {
+            } catch {
                 // Page appears to be closed or crashed
             }
         }
