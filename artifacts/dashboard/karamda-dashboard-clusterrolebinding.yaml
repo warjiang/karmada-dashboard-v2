@@ -7,9 +7,10 @@ rules:
       - 'cluster.karmada.io'
     resources:
       - clusters/proxy
-    # here we only allow `karamda-dasbhaord` serviceaccount access member1 cluster
+    # set * for all member-cluster
+    # or enumerate member-cluster in a list for accurate control
     resourceNames:
-      - member1
+      - *
     verbs:
       - '*'
   - apiGroups:
