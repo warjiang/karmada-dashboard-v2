@@ -1,0 +1,23 @@
+- op: replace
+  path: /spec/template/spec/containers/0/command
+  value:
+    - kubernetes-dashboard-api
+    - --bind-address=0.0.0.0
+    - --insecure-bind-address=0.0.0.0
+    - --karmada-kubeconfig=/etc/karmada/config/karmada.config
+    - --karmada-context=karmada-apiserver
+    - --openapi-enabled
+    - --metrics-provider=none
+- op: replace
+  path: /spec/template/spec/containers/0/volumeMounts
+  value:
+    - name: karmada-config
+      mountPath: /etc/karmada/config/karmada.config
+      subPath: karmada.config
+- op: replace
+  path: /spec/template/spec/volumes
+  value:
+    - name: karmada-config
+      secret:
+        defaultMode: 420
+        secretName: karmada-dashboard-config

@@ -1,0 +1,19 @@
+- op: replace
+  path: /spec/template/spec/containers/0/volumeMounts
+  value:
+    - name: karmada-config
+      mountPath: /etc/karmada/config/karmada.config
+      subPath: karmada.config
+    - name: dashboard-config
+      subPath: prod.yaml
+      mountPath: /config/dashboard-config.yaml
+- op: replace
+  path: /spec/template/spec/volumes
+  value:
+    - name: karmada-config
+      secret:
+        defaultMode: 420
+        secretName: karmada-dashboard-config
+    - name: dashboard-config
+      configMap:
+        name: karmada-dashboard-configmap
