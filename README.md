@@ -60,6 +60,12 @@ Create the secret based on your Karmada config, the Karmada Dashboard will use t
 kubectl create secret generic kubeconfig --from-file=kubeconfig=$HOME/.kube/karmada.config -n karmada-system
 ```
 
+If you installed Karmada with the patched flow that generates dashboard-specific certs (for example, `karmada-dashboard-client.*` under `${HOME}/.karmada`), you can generate an independent dashboard kubeconfig secret with:
+```
+hack/deploy-karmada-dashboard.sh "$HOME/.kube/karmada.config" karmada-host
+```
+This command creates `karmada-dashboard-config` in `karmada-system` and can be used as a standalone post-Karmada installation step.
+
 Deploy Karmada Dashboard:
 ```
 kubectl apply -k artifacts/overlays/nodeport-mode
