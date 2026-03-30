@@ -14,20 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import {
-  App,
-  Button,
-  Drawer,
-  Input,
-  Select,
-  Space,
-  Table,
-  TableColumnProps,
-  Tag,
-  Tooltip,
-} from 'antd';
+import { App, Input, Select, Table, TableColumnProps, Tag, Tooltip } from 'antd';
 import { Icons } from '@/components/icons';
-import React from 'react';
+import { TablePageLayout } from '@/components/table-page-layout';
 import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -37,10 +26,10 @@ import {
   Secret,
   SecretDetail,
 } from '@/services/member-cluster/config';
-import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
-import Editor from '@monaco-editor/react';
 import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
+import { ActionButtons, NameCell, NamespaceCell, AgeCell } from '@/components/table-columns';
+import { ViewDrawer, EditDrawer } from '@/components/resource-drawers';
 
 export default function MemberClusterSecrets() {
   const { message: messageApi } = App.useApp();
@@ -77,34 +66,22 @@ export default function MemberClusterSecrets() {
   });
 
   const getTypeTag = (type: string) => {
-    const typeConfig: Record<string, { color: string; icon: React.ReactNode }> = {
-      Opaque: { color: 'blue', icon: <Icons.lock width={16} height={16} /> },
-      'kubernetes.io/tls': {
-        color: 'green',
-        icon: <Icons.certificate width={16} height={16} />,
-      },
-      'kubernetes.io/dockerconfigjson': {
-        color: 'purple',
-        icon: <Icons.database width={16} height={16} />,
-      },
-      'kubernetes.io/service-account-token': {
-        color: 'orange',
-        icon: <Icons.key width={16} height={16} />,
-      },
+    const typeColors: Record<string, string> = {
+      'Opaque': 'blue',
+      'kubernetes.io/tls': 'green',
+      'kubernetes.io/dockerconfigjson': 'purple',
+      'kubernetes.io/service-account-token': 'orange',
     };
 
-    const config = typeConfig[type] || {
-      color: 'default',
-      icon: <Icons.lock width={16} height={16} />,
-    };
+    const displayType = type === 'kubernetes.io/dockerconfigjson'
+      ? 'docker-registry'
+      : type === 'kubernetes.io/service-account-token'
+        ? 'service-account'
+        : type;
 
     return (
-      <Tag color={config.color} icon={config.icon} className="inline-flex items-center gap-1.5">
-        {type === 'kubernetes.io/dockerconfigjson'
-          ? 'docker-registry'
-          : type === 'kubernetes.io/service-account-token'
-            ? 'service-account'
-            : type}
+      <Tag color={typeColors[type] || 'default'} className="text-xs">
+        {displayType}
       </Tag>
     );
   };
@@ -112,13 +89,13 @@ export default function MemberClusterSecrets() {
   const formatDataKeys = (s: Secret) => {
     const keys = Object.keys(s.data || {});
     if (!keys.length) {
-      return <span className="text-gray-400">-</span>;
+      return <span className="text-[var(--kd-text-tertiary)] text-xs">-</span>;
     }
     if (keys.length === 1) {
       return (
         <div className="flex items-center gap-1">
-          <Icons.key width={16} height={16} className="text-blue-500" />
-          <code className="text-xs">{keys[0]}</code>
+          <Icons.key className="w-4 h-4 text-[var(--kd-primary-600)]" />
+          <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded">{keys[0]}</code>
         </div>
       );
     }
@@ -126,9 +103,9 @@ export default function MemberClusterSecrets() {
     return (
       <Tooltip title={keys.join(', ')}>
         <div className="flex items-center gap-1">
-          <Icons.key width={16} height={16} className="text-blue-500" />
-          <code className="text-xs">{keys[0]}</code>
-          <Tag color="blue">+{keys.length - 1}</Tag>
+          <Icons.key className="w-4 h-4 text-[var(--kd-primary-600)]" />
+          <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded">{keys[0]}</code>
+          <Tag color="blue" className="text-xs">+{keys.length - 1}</Tag>
         </div>
       </Tooltip>
     );
@@ -138,7 +115,7 @@ export default function MemberClusterSecrets() {
     const labels = s.objectMeta.labels || {};
     const entries = Object.entries(labels);
     if (!entries.length) {
-      return <span className="text-gray-400">-</span>;
+      return <span className="text-[var(--kd-text-tertiary)] text-xs">-</span>;
     }
     const first = `${entries[0][0]}=${entries[0][1]}`;
     const remaining = entries.length - 1;
@@ -156,10 +133,10 @@ export default function MemberClusterSecrets() {
     return (
       <Tooltip title={full}>
         <div className="flex items-center gap-1">
-          <Tag color="geekblue" className="text-xs">
+          <Tag color="geekblue" className="text-xs max-w-[150px] truncate">
             {first}
           </Tag>
-          <Tag color="purple">+{remaining}</Tag>
+          <Tag color="purple" className="text-xs">+{remaining}</Tag>
         </div>
       </Tooltip>
     );
@@ -170,120 +147,113 @@ export default function MemberClusterSecrets() {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: 200,
       render: (_: string, record: Secret) => (
-        <strong>{record.objectMeta.name}</strong>
+        <NameCell
+          name={record.objectMeta.name}
+          icon={<Icons.lock className="w-4 h-4" />}
+        />
       ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
       key: 'namespace',
-      render: (_: string, record: Secret) => record.objectMeta.namespace,
+      width: 120,
+      render: (_: string, record: Secret) => (
+        <NamespaceCell namespace={record.objectMeta.namespace} />
+      ),
     },
     {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
+      width: 150,
       render: (_: string, record: Secret) => getTypeTag(record.type),
     },
     {
       title: 'Data Keys',
       dataIndex: 'dataKeys',
       key: 'dataKeys',
+      width: 200,
       render: (_: unknown, record: Secret) => formatDataKeys(record),
     },
     {
       title: 'Labels',
       dataIndex: 'labels',
       key: 'labels',
+      width: 200,
       render: (_: unknown, record: Secret) => formatLabels(record),
     },
     {
       title: 'Age',
       dataIndex: 'age',
       key: 'age',
-      render: (_: string, record: Secret) => {
-        const create = dayjs(record.objectMeta.creationTimestamp);
-        return create.fromNow();
-      },
+      width: 80,
+      render: (_: string, record: Secret) => (
+        <AgeCell creationTimestamp={record.objectMeta.creationTimestamp} />
+      ),
     },
     {
       title: 'Actions',
       key: 'actions',
+      width: 140,
+      fixed: 'right',
       render: (_: unknown, record: Secret) => (
-        <Space>
-          <Button
-            icon={<Icons.eye width={16} height={16} />}
-            title="View Secret details"
-            onClick={async () => {
-              setViewLoading(true);
-              try {
-                const detailResp = await GetMemberClusterSecretDetail({
-                  memberClusterName,
-                  namespace: record.objectMeta.namespace,
-                  name: record.objectMeta.name,
-                });
+        <ActionButtons
+          onView={async () => {
+            setViewLoading(true);
+            try {
+              const detailResp = await GetMemberClusterSecretDetail({
+                memberClusterName,
+                namespace: record.objectMeta.namespace,
+                name: record.objectMeta.name,
+              });
 
-                setViewDetail(detailResp?.data as SecretDetail);
-                setViewDrawerOpen(true);
-              } catch {
+              setViewDetail(detailResp?.data as SecretDetail);
+              setViewDrawerOpen(true);
+            } catch {
+              void messageApi.error('Failed to load Secret');
+            } finally {
+              setViewLoading(false);
+            }
+          }}
+          onEdit={async () => {
+            try {
+              const ret = await GetResource({
+                memberClusterName,
+                kind: record.typeMeta.kind,
+                name: record.objectMeta.name,
+                namespace: record.objectMeta.namespace,
+              });
+              if (ret.status !== 200) {
                 void messageApi.error('Failed to load Secret');
-              } finally {
-                setViewLoading(false);
+                return;
               }
-            }}
-          >
-            View
-          </Button>
-          <Button
-            icon={<Icons.edit width={16} height={16} />}
-            title="Edit Secret"
-            onClick={async () => {
-              try {
-                const ret = await GetResource({
-                  memberClusterName,
-                  kind: record.typeMeta.kind,
-                  name: record.objectMeta.name,
-                  namespace: record.objectMeta.namespace,
-                });
-                if (ret.status !== 200) {
-                  void messageApi.error('Failed to load Secret');
-                  return;
-                }
 
-                setEditContent(stringify(ret.data));
-                setEditDrawerOpen(true);
-              } catch {
-                void messageApi.error('Failed to load Secret');
-              }
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            icon={<Icons.delete width={16} height={16} />}
-            danger
-            title="Delete Secret"
-            disabled
-          >
-            Delete
-          </Button>
-        </Space>
+              setEditContent(stringify(ret.data));
+              setEditDrawerOpen(true);
+            } catch {
+              void messageApi.error('Failed to load Secret');
+            }
+          }}
+        />
       ),
     },
   ];
 
-  return (
-    <div className="h-full w-full flex flex-col p-4">
-      <div className={"flex flex-row space-x-4 mb-4"}>
-        <h3 className={"leading-[32px]"}>Namespace:</h3>
+  const filterBar = (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-[var(--kd-text-secondary)]">Namespace:</span>
         <Select
           options={nsOptions}
-          className={"min-w-[200px]"}
+          className="min-w-[160px]"
           value={filter.selectedWorkSpace}
           loading={isNsDataLoading}
           showSearch
           allowClear
+          placeholder="All namespaces"
           onChange={(v) => {
             setFilter({
               ...filter,
@@ -291,163 +261,114 @@ export default function MemberClusterSecrets() {
             });
           }}
         />
-        <Input.Search
-          placeholder="Search by name"
-          className={"w-[300px]"}
-          onPressEnter={(e) => {
-            const input = e.currentTarget.value;
-            setFilter({
-              ...filter,
-              searchText: input,
-            });
-          }}
-        />
       </div>
+      <Input.Search
+        placeholder="Search by name"
+        className="w-[240px]"
+        allowClear
+        onPressEnter={(e) => {
+          const input = e.currentTarget.value;
+          setFilter({
+            ...filter,
+            searchText: input,
+          });
+        }}
+        onSearch={(value) => {
+          setFilter({
+            ...filter,
+            searchText: value,
+          });
+        }}
+      />
+    </div>
+  );
 
-      <div className="flex-1 flex flex-col">
-        <Table
-          columns={columns}
-          dataSource={data?.secrets || []}
-          rowKey={(record) =>
-            `${record.objectMeta.namespace}-${record.objectMeta.name}`
-          }
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} secrets`,
-          }}
-          loading={isLoading}
-        />
-      </div>
+  return (
+    <TablePageLayout filterBar={filterBar}>
+      <Table
+        columns={columns}
+        dataSource={data?.secrets || []}
+        rowKey={(record) => `${record.objectMeta.namespace}-${record.objectMeta.name}`}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} secrets`,
+          className: 'px-4 py-3',
+        }}
+        loading={isLoading}
+        scroll={{ x: 1000 }}
+        className="kd-table"
+      />
 
-      <Drawer
-        title="Secret details"
-        placement="right"
-        width={800}
+      <ViewDrawer
         open={viewDrawerOpen}
         onClose={() => {
           setViewDrawerOpen(false);
           setViewDetail(null);
         }}
-        destroyOnClose
-      >
-        {viewLoading && <div>Loading...</div>}
-        {!viewLoading && viewDetail && (
-          <div className="space-y-4">
-            <div>
-              <div className="font-semibold mb-2">Basic Info</div>
-              <div>Name: {viewDetail.objectMeta?.name}</div>
-              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
-              <div>Type: {viewDetail.type}</div>
-              <div>
-                Created:{' '}
-                {viewDetail.objectMeta?.creationTimestamp
-                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
-                    'YYYY-MM-DD HH:mm:ss',
-                  )
-                  : '-'}
-              </div>
-              <div>
-                Keys:{' '}
-                <code className="text-xs">
-                  {(viewDetail.keys || []).join(', ')}
-                </code>
-              </div>
-            </div>
-            <div>
-              <div className="font-semibold mb-2">Data (base64)</div>
-              <div className="space-y-1 text-xs">
-                {Object.keys(viewDetail.data || {}).length ? (
-                  Object.entries(viewDetail.data || {}).map(([k, v]) => (
-                    <div key={k} className="border-b pb-1">
-                      <div className="font-semibold">{k}</div>
-                      <code className="break-all">{v}</code>
-                    </div>
-                  ))
-                ) : (
-                  <div>No data (or hidden)</div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </Drawer>
+        title="Secret Details"
+        icon={<Icons.lock className="w-5 h-5 text-[var(--kd-primary-600)]" />}
+        loading={viewLoading}
+        detail={viewDetail}
+        extraFields={[
+          {
+            label: 'Type',
+            value: viewDetail?.type || '-',
+          },
+          {
+            label: 'Keys',
+            value: (viewDetail?.keys || []).join(', ') || '-',
+          },
+        ]}
+      />
 
-      <Drawer
-        title="Edit Secret (YAML)"
-        placement="right"
-        width={900}
+      <EditDrawer
         open={editDrawerOpen}
         onClose={() => {
-          if (!editSubmitting) {
+          setEditDrawerOpen(false);
+          setEditContent('');
+        }}
+        title="Edit Secret (YAML)"
+        icon={<Icons.edit className="w-5 h-5 text-[var(--kd-primary-600)]" />}
+        content={editContent}
+        onChange={setEditContent}
+        loading={editSubmitting}
+        onSave={async () => {
+          setEditSubmitting(true);
+          try {
+            const yamlObject = parse(editContent) as Record<string, any>;
+            const kind = (yamlObject.kind || '') as string;
+            const metadata = (yamlObject.metadata || {}) as {
+              name?: string;
+              namespace?: string;
+            };
+            const name = metadata.name || '';
+            const namespace = metadata.namespace || '';
+
+            const ret = await PutResource({
+              memberClusterName,
+              kind,
+              name,
+              namespace,
+              content: yamlObject,
+            });
+
+            if (ret.code !== 200) {
+              void messageApi.error(ret.message || 'Failed to update Secret');
+              return;
+            }
+
             setEditDrawerOpen(false);
             setEditContent('');
+            void messageApi.success('Secret updated successfully');
+          } catch {
+            void messageApi.error('Failed to update Secret');
+          } finally {
+            setEditSubmitting(false);
           }
         }}
-        destroyOnClose
-        extra={
-          <Space>
-            <Button
-              type="primary"
-              loading={editSubmitting}
-              onClick={async () => {
-                setEditSubmitting(true);
-                try {
-                  const yamlObject = parse(editContent) as Record<string, any>;
-                  const kind = (yamlObject.kind || '') as string;
-                  const metadata = (yamlObject.metadata || {}) as {
-                    name?: string;
-                    namespace?: string;
-                  };
-                  const name = metadata.name || '';
-                  const namespace = metadata.namespace || '';
-
-                  const ret = await PutResource({
-                    memberClusterName,
-                    kind,
-                    name,
-                    namespace,
-                    content: yamlObject,
-                  });
-
-                  if (ret.code !== 200) {
-                    void messageApi.error(
-                      ret.message || 'Failed to update Secret',
-                    );
-                    return;
-                  }
-
-                  setEditDrawerOpen(false);
-                  setEditContent('');
-                } catch {
-                  void messageApi.error('Failed to update Secret');
-                } finally {
-                  setEditSubmitting(false);
-                }
-              }}
-            >
-              Save
-            </Button>
-          </Space>
-        }
-      >
-        <Editor
-          height="600px"
-          defaultLanguage="yaml"
-          value={editContent}
-          theme="vs"
-          options={{
-            theme: 'vs',
-            lineNumbers: 'on',
-            fontSize: 14,
-            minimap: { enabled: false },
-            wordWrap: 'on',
-          }}
-          onChange={(value) => setEditContent(value || '')}
-        />
-      </Drawer>
-    </div>
+      />
+    </TablePageLayout>
   );
 }

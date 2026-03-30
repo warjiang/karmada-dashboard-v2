@@ -25,8 +25,11 @@ import {
   TableColumnProps,
   Tag,
   Tooltip,
+  Descriptions,
+  Badge,
 } from 'antd';
 import { Icons } from '@/components/icons';
+import { TablePageLayout } from '@/components/table-page-layout';
 import React from 'react';
 import { useMemberClusterContext, useMemberClusterNamespace } from '@/hooks';
 import { useState } from 'react';
@@ -40,9 +43,11 @@ import {
 } from '@/services/member-cluster/service';
 import dayjs from 'dayjs';
 import { stringify, parse } from 'yaml';
-import Editor from '@monaco-editor/react';
+import { MonacoEditor } from '@/components/monaco-editor';
 import { GetResource, PutResource } from '@/services/member-cluster/unstructured';
-import { Event } from '@/services/member-cluster/event'
+import { Event } from '@/services/member-cluster/event';
+import { cn } from '@/utils/cn';
+
 export default function MemberClusterServices() {
   const { message: messageApi } = App.useApp();
   const { memberClusterName } = useMemberClusterContext();
@@ -87,20 +92,39 @@ export default function MemberClusterServices() {
     };
 
     const typeIcons: Record<string, React.ReactNode> = {
-      'ClusterIP': <Icons.api width={16} height={16} />,
-      'NodePort': <Icons.global width={16} height={16} />,
-      'LoadBalancer': <Icons.global width={16} height={16} />,
-      'ExternalName': <Icons.global width={16} height={16} />
+      'ClusterIP': <Icons.api className="w-3.5 h-3.5" />,
+      'NodePort': <Icons.global className="w-3.5 h-3.5" />,
+      'LoadBalancer': <Icons.global className="w-3.5 h-3.5" />,
+      'ExternalName': <Icons.global className="w-3.5 h-3.5" />
     };
 
-    return <Tag color={typeColors[type] || 'default'} icon={typeIcons[type]} className="inline-flex items-center gap-1.5">
-      {type}
-    </Tag>;
+    return (
+      <Tag 
+        color={typeColors[type] || 'default'} 
+        className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium border-0"
+        style={{ backgroundColor: `var(--kd-${typeColors[type] || 'gray'}-50)`, color: `var(--kd-${typeColors[type] || 'gray'}-600)` }}
+      >
+        {typeIcons[type]}
+        {type}
+      </Tag>
+    );
   };
 
   const getEndpointsTag = (endpointCount: number) => {
-    const color = endpointCount > 0 ? 'success' : 'error';
-    return <Tag color={color}>{endpointCount} ready</Tag>;
+    const isReady = endpointCount > 0;
+    return (
+      <Badge
+        status={isReady ? 'success' : 'error'}
+        text={
+          <span className={cn(
+            'text-xs font-medium',
+            isReady ? 'text-[var(--kd-success-600)]' : 'text-[var(--kd-error-600)]'
+          )}>
+            {endpointCount} ready
+          </span>
+        }
+      />
+    );
   };
 
   const formatExternalIPs = (svc: Service) => {
@@ -109,18 +133,24 @@ export default function MemberClusterServices() {
       .filter(Boolean);
 
     if (!addresses || addresses.length === 0) {
-      return <span className="text-gray-400">None</span>;
+      return <span className="text-[var(--kd-text-tertiary)] text-xs">-</span>;
     }
 
     if (addresses.length === 1) {
-      return <code className="text-xs">{addresses[0]}</code>;
+      return (
+        <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded text-[var(--kd-text-primary)]">
+          {addresses[0]}
+        </code>
+      );
     }
 
     return (
       <Tooltip title={addresses.join(', ')}>
         <div className="flex items-center gap-1">
-          <code className="text-xs">{addresses[0]}</code>
-          <Tag color="blue">+{addresses.length - 1}</Tag>
+          <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded text-[var(--kd-text-primary)]">
+            {addresses[0]}
+          </code>
+          <Tag color="blue" className="text-xs px-1.5 py-0">+{addresses.length - 1}</Tag>
         </div>
       </Tooltip>
     );
@@ -129,7 +159,7 @@ export default function MemberClusterServices() {
   const formatSelector = (svc: Service) => {
     const selectorEntries = Object.entries(svc.selector || {});
     if (!selectorEntries.length) {
-      return <span className="text-gray-400">-</span>;
+      return <span className="text-[var(--kd-text-tertiary)] text-xs">-</span>;
     }
     const selectorText = selectorEntries
       .map(([k, v]) => `${k}=${v}`)
@@ -137,10 +167,11 @@ export default function MemberClusterServices() {
 
     return (
       <Tooltip title={selectorText}>
-        <Tag color="geekblue" className="text-xs">
-          {selectorText.length > 30
-            ? `${selectorText.substring(0, 30)}...`
-            : selectorText}
+        <Tag 
+          color="geekblue" 
+          className="text-xs max-w-[150px] truncate"
+        >
+          {selectorText}
         </Tag>
       </Tooltip>
     );
@@ -149,20 +180,26 @@ export default function MemberClusterServices() {
   const formatPorts = (svc: Service) => {
     const ports = svc.internalEndpoint?.ports || [];
     if (!ports.length) {
-      return <span className="text-gray-400">-</span>;
+      return <span className="text-[var(--kd-text-tertiary)] text-xs">-</span>;
     }
 
     const portStrings = ports.map((p) => `${p.port}/${p.protocol}`);
 
     if (portStrings.length === 1) {
-      return <code className="text-xs">{portStrings[0]}</code>;
+      return (
+        <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded text-[var(--kd-text-primary)]">
+          {portStrings[0]}
+        </code>
+      );
     }
 
     return (
       <Tooltip title={portStrings.join(', ')}>
         <div className="flex items-center gap-1">
-          <code className="text-xs">{portStrings[0]}</code>
-          <Tag color="blue">+{portStrings.length - 1}</Tag>
+          <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded text-[var(--kd-text-primary)]">
+            {portStrings[0]}
+          </code>
+          <Tag color="blue" className="text-xs px-1.5 py-0">+{portStrings.length - 1}</Tag>
         </div>
       </Tooltip>
     );
@@ -173,46 +210,66 @@ export default function MemberClusterServices() {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
+      width: 200,
       render: (_: string, record: Service) => (
-        <strong>{record.objectMeta.name}</strong>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[var(--kd-primary-50)] flex items-center justify-center flex-shrink-0">
+            <Icons.cloud className="w-4 h-4 text-[var(--kd-primary-600)]" />
+          </div>
+          <span className="font-medium text-[var(--kd-text-primary)] text-sm">
+            {record.objectMeta.name}
+          </span>
+        </div>
       ),
     },
     {
       title: 'Namespace',
       dataIndex: 'namespace',
       key: 'namespace',
-      render: (_: string, record: Service) => record.objectMeta.namespace,
+      width: 120,
+      render: (_: string, record: Service) => (
+        <span className="text-sm text-[var(--kd-text-secondary)]">
+          {record.objectMeta.namespace}
+        </span>
+      ),
     },
     {
       title: 'Type',
       dataIndex: 'type',
       key: 'type',
+      width: 140,
       render: (_: string, record: Service) => getTypeTag(record.type),
     },
     {
       title: 'Cluster IP',
       dataIndex: 'clusterIP',
       key: 'clusterIP',
+      width: 120,
       render: (_: string, record: Service) => (
-        <code className="text-xs">{record.clusterIP}</code>
+        <code className="text-xs bg-[var(--kd-gray-100)] px-2 py-1 rounded text-[var(--kd-text-primary)]">
+          {record.clusterIP}
+        </code>
       ),
     },
     {
       title: 'External IP',
       dataIndex: 'externalIP',
       key: 'externalIP',
+      width: 150,
       render: (_: string, record: Service) => formatExternalIPs(record),
     },
     {
       title: 'Ports',
       dataIndex: 'ports',
       key: 'ports',
+      width: 120,
       render: (_: string, record: Service) => formatPorts(record),
     },
     {
       title: 'Endpoints',
       dataIndex: 'endpoints',
       key: 'endpoints',
+      width: 100,
       render: (_: number, record: Service) => {
         const endpointCount = record.internalEndpoint?.ports?.length || 0;
         return getEndpointsTag(endpointCount);
@@ -222,103 +279,117 @@ export default function MemberClusterServices() {
       title: 'Selector',
       dataIndex: 'selector',
       key: 'selector',
+      width: 180,
       render: (_: string, record: Service) => formatSelector(record),
     },
     {
       title: 'Age',
       dataIndex: 'age',
       key: 'age',
+      width: 80,
       render: (_: string, record: Service) => {
         const create = dayjs(record.objectMeta.creationTimestamp);
-        return create.fromNow();
+        return (
+          <span className="text-xs text-[var(--kd-text-secondary)]">
+            {create.fromNow()}
+          </span>
+        );
       },
     },
     {
       title: 'Actions',
       key: 'actions',
+      width: 140,
+      fixed: 'right',
       render: (_: unknown, record: Service) => (
-        <Space>
-          <Button
-            icon={<Icons.eye width={16} height={16} />}
-            title="View details"
-            onClick={async () => {
-              // Pre-fill basic info from list row so drawer always has content
-              setViewDetail(record);
-              setViewLoading(true);
-              try {
-                const detailResp = await GetMemberClusterServiceDetail({
-                  memberClusterName,
-                  namespace: record.objectMeta.namespace,
-                  name: record.objectMeta.name,
-                });
-                const eventsResp = await GetMemberClusterServiceEvents({
-                  memberClusterName,
-                  namespace: record.objectMeta.namespace,
-                  name: record.objectMeta.name,
-                });
+        <Space size={4}>
+          <Tooltip title="View details">
+            <Button
+              type="text"
+              size="small"
+              icon={<Icons.eye className="w-4 h-4" />}
+              className="text-[var(--kd-text-secondary)] hover:text-[var(--kd-primary-600)] hover:bg-[var(--kd-primary-50)]"
+              onClick={async () => {
+                setViewDetail(record);
+                setViewLoading(true);
+                try {
+                  const detailResp = await GetMemberClusterServiceDetail({
+                    memberClusterName,
+                    namespace: record.objectMeta.namespace,
+                    name: record.objectMeta.name,
+                  });
+                  const eventsResp = await GetMemberClusterServiceEvents({
+                    memberClusterName,
+                    namespace: record.objectMeta.namespace,
+                    name: record.objectMeta.name,
+                  });
 
-                setViewDetail((detailResp.data ?? {}) as Service);
-                setViewEvents(eventsResp?.data?.events ?? []);
-                setViewDrawerOpen(true);
-              } catch {
-                void messageApi.error('Failed to load Service details');
-              } finally {
-                setViewLoading(false);
-              }
-            }}
-          >
-            View
-          </Button>
-          <Button
-            icon={<Icons.edit width={16} height={16} />}
-            title="Edit Service"
-            onClick={async () => {
-              try {
-                const ret = await GetResource({
-                  memberClusterName,
-                  kind: record.typeMeta.kind,
-                  name: record.objectMeta.name,
-                  namespace: record.objectMeta.namespace,
-                });
-
-                if (ret.status !== 200) {
-                  void messageApi.error('Failed to load Service');
-                  return;
+                  setViewDetail((detailResp.data ?? {}) as Service);
+                  setViewEvents(eventsResp?.data?.events ?? []);
+                  setViewDrawerOpen(true);
+                } catch {
+                  void messageApi.error('Failed to load Service details');
+                } finally {
+                  setViewLoading(false);
                 }
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Edit Service">
+            <Button
+              type="text"
+              size="small"
+              icon={<Icons.edit className="w-4 h-4" />}
+              className="text-[var(--kd-text-secondary)] hover:text-[var(--kd-primary-600)] hover:bg-[var(--kd-primary-50)]"
+              onClick={async () => {
+                try {
+                  const ret = await GetResource({
+                    memberClusterName,
+                    kind: record.typeMeta.kind,
+                    name: record.objectMeta.name,
+                    namespace: record.objectMeta.namespace,
+                  });
 
-                setEditContent(stringify(ret.data));
-                setEditDrawerOpen(true);
-              } catch {
-                void messageApi.error('Failed to load Service');
-              }
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            icon={<Icons.delete width={16} height={16} />}
-            danger
-            title="Delete Service"
-            disabled
-          >
-            Delete
-          </Button>
+                  if (ret.status !== 200) {
+                    void messageApi.error('Failed to load Service');
+                    return;
+                  }
+
+                  setEditContent(stringify(ret.data));
+                  setEditDrawerOpen(true);
+                } catch {
+                  void messageApi.error('Failed to load Service');
+                }
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Delete Service">
+            <Button
+              type="text"
+              size="small"
+              danger
+              disabled
+              icon={<Icons.delete className="w-4 h-4" />}
+              className="hover:bg-[var(--kd-error-50)]"
+            />
+          </Tooltip>
         </Space>
       ),
     }
   ];
 
-  return (
-    <div className="h-full w-full flex flex-col p-4">
-      <div className={"flex flex-row space-x-4 mb-4"}>
-        <h3 className={"leading-[32px]"}>Namespace:</h3>
+  const filterBar = (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-[var(--kd-text-secondary)]">Namespace:</span>
         <Select
           options={nsOptions}
-          className={"min-w-[200px]"}
+          className="min-w-[160px]"
           value={filter.selectedWorkSpace}
           loading={isNsDataLoading}
           showSearch
           allowClear
+          placeholder="All namespaces"
           onChange={(v) => {
             setFilter({
               ...filter,
@@ -326,39 +397,57 @@ export default function MemberClusterServices() {
             });
           }}
         />
-        <Input.Search
-          placeholder="Search by name"
-          className={"w-[300px]"}
-          onPressEnter={(e) => {
-            const input = e.currentTarget.value;
-            setFilter({
-              ...filter,
-              searchText: input,
-            });
-          }}
-        />
       </div>
+      <Input.Search
+        placeholder="Search by name"
+        className="w-[240px]"
+        allowClear
+        onPressEnter={(e) => {
+          const input = e.currentTarget.value;
+          setFilter({
+            ...filter,
+            searchText: input,
+          });
+        }}
+        onSearch={(value) => {
+          setFilter({
+            ...filter,
+            searchText: value,
+          });
+        }}
+      />
+    </div>
+  );
 
-      <div className="flex-1 flex flex-col">
-        <Table
-          columns={columns}
-          dataSource={data?.services || []}
-          rowKey={(record) => record.objectMeta.name}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total} services`,
-          }}
-          loading={isLoading}
-        />
-      </div>
+  return (
+    <TablePageLayout filterBar={filterBar}>
+      <Table
+        columns={columns}
+        dataSource={data?.services || []}
+        rowKey={(record) => `${record.objectMeta.namespace}-${record.objectMeta.name}`}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) =>
+            `${range[0]}-${range[1]} of ${total} services`,
+          className: 'px-4 py-3',
+        }}
+        loading={isLoading}
+        scroll={{ x: 1400 }}
+        className="kd-table"
+      />
 
+      {/* View Drawer */}
       <Drawer
-        title="Service details"
+        title={
+          <div className="flex items-center gap-2">
+            <Icons.cloud className="w-5 h-5 text-[var(--kd-primary-600)]" />
+            <span>Service Details</span>
+          </div>
+        }
         placement="right"
-        width={800}
+        width={700}
         open={viewDrawerOpen}
         onClose={() => {
           setViewDrawerOpen(false);
@@ -367,58 +456,82 @@ export default function MemberClusterServices() {
         }}
         destroyOnClose
       >
-        {viewLoading && <div>Loading...</div>}
+        {viewLoading && (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--kd-primary-600)]" />
+          </div>
+        )}
         {!viewLoading && viewDetail && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            <Descriptions
+              title="Basic Information"
+              column={1}
+              bordered
+              size="small"
+              labelStyle={{ width: 120, backgroundColor: 'var(--kd-gray-50)' }}
+              items={[
+                { label: 'Name', children: viewDetail.objectMeta?.name },
+                { label: 'Namespace', children: viewDetail.objectMeta?.namespace },
+                { label: 'Type', children: viewDetail.type },
+                { label: 'Cluster IP', children: viewDetail.clusterIP },
+                { 
+                  label: 'Created', 
+                  children: viewDetail.objectMeta?.creationTimestamp
+                    ? dayjs(viewDetail.objectMeta.creationTimestamp).format('YYYY-MM-DD HH:mm:ss')
+                    : '-' 
+                },
+              ]}
+            />
+
             <div>
-              <div className="font-semibold mb-2">Basic Info</div>
-              <div>Name: {viewDetail.objectMeta?.name}</div>
-              <div>Namespace: {viewDetail.objectMeta?.namespace}</div>
-              <div>Type: {viewDetail.type}</div>
-              <div>Cluster IP: {viewDetail.clusterIP}</div>
-              <div>
-                Created:{' '}
-                {viewDetail.objectMeta?.creationTimestamp
-                  ? dayjs(viewDetail.objectMeta.creationTimestamp).format(
-                    'YYYY-MM-DD HH:mm:ss',
-                  )
-                  : '-'}
-              </div>
-            </div>
-            <div>
-              <div className="font-semibold mb-2">Selector</div>
-              <div>
+              <h4 className="text-sm font-semibold mb-3 text-[var(--kd-text-primary)]">Selector</h4>
+              <div className="flex flex-wrap gap-2">
                 {Object.entries(viewDetail.selector || {}).map(([k, v]) => (
-                  <Tag key={k} color="geekblue" className="text-xs mr-1">
+                  <Tag key={k} color="geekblue" className="text-xs">
                     {k}={v}
                   </Tag>
                 ))}
-                {!viewDetail.selector && <span>-</span>}
+                {!viewDetail.selector && <span className="text-[var(--kd-text-tertiary)]">-</span>}
               </div>
             </div>
+
             <div>
-              <div className="font-semibold mb-2">Events</div>
-              <div className="space-y-1 max-h-64 overflow-auto text-xs">
+              <h4 className="text-sm font-semibold mb-3 text-[var(--kd-text-primary)]">Events</h4>
+              <div className="space-y-2 max-h-64 overflow-auto">
                 {viewEvents.map((e) => (
-                  <div key={e.objectMeta.uid} className="border-b pb-1">
-                    <div>
-                      [{e.type}] {e.reason}
+                  <div 
+                    key={e.objectMeta.uid} 
+                    className="border border-[var(--kd-border-light)] rounded-lg p-3 text-xs"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge status={e.type === 'Normal' ? 'success' : 'error'} />
+                      <span className="font-medium">{e.reason}</span>
                     </div>
-                    <div>{e.message}</div>
-                    <div className="text-gray-500">
+                    <div className="text-[var(--kd-text-secondary)] mb-1">{e.message}</div>
+                    <div className="text-[var(--kd-text-tertiary)] text-[11px]">
                       {e.sourceComponent} · {e.lastSeen}
                     </div>
                   </div>
                 ))}
-                {!viewEvents.length && <div>No events</div>}
+                {!viewEvents.length && (
+                  <div className="text-center py-8 text-[var(--kd-text-tertiary)]">
+                    No events
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
       </Drawer>
 
+      {/* Edit Drawer */}
       <Drawer
-        title="Edit Service (YAML)"
+        title={
+          <div className="flex items-center gap-2">
+            <Icons.edit className="w-5 h-5 text-[var(--kd-primary-600)]" />
+            <span>Edit Service (YAML)</span>
+          </div>
+        }
         placement="right"
         width={900}
         open={editDrawerOpen}
@@ -431,6 +544,14 @@ export default function MemberClusterServices() {
         destroyOnClose
         extra={
           <Space>
+            <Button
+              onClick={() => {
+                setEditDrawerOpen(false);
+                setEditContent('');
+              }}
+            >
+              Cancel
+            </Button>
             <Button
               type="primary"
               loading={editSubmitting}
@@ -475,21 +596,13 @@ export default function MemberClusterServices() {
           </Space>
         }
       >
-        <Editor
-          height="600px"
+        <MonacoEditor
+          height="calc(100vh - 180px)"
           defaultLanguage="yaml"
           value={editContent}
-          theme="vs"
-          options={{
-            theme: 'vs',
-            lineNumbers: 'on',
-            fontSize: 14,
-            minimap: { enabled: false },
-            wordWrap: 'on',
-          }}
-          onChange={(value) => setEditContent(value || '')}
+          onChange={(value: string | undefined) => setEditContent(value || '')}
         />
       </Drawer>
-    </div>
+    </TablePageLayout>
   );
 }
