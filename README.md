@@ -14,6 +14,13 @@ If you don't already have the Karmada, you can launch one by following this [tut
 
 
 ---
+### Generate independent dashboard kubeconfig
+After Karmada control plane is installed and certificates exist in `${HOME}/.karmada` (or `CERT_DIR`), run:
+```bash
+hack/generate-karmada-dashboard-kubeconfig.sh <HOST_CLUSTER_KUBECONFIG> <HOST_CONTEXT_NAME>
+```
+This will create/update `karmada-dashboard-config` in namespace `karmada-system`.
+
 ### Install Karmada-dashboard
 In the following steps, we are going to install Karmada Dashboard on the `host cluster` where running the Karmada
 control plane components. We assume that Karmada was installed in namespace `karmada-system` and Karmada config is 
@@ -59,6 +66,12 @@ Create the secret based on your Karmada config, the Karmada Dashboard will use t
 ```
 kubectl create secret generic kubeconfig --from-file=kubeconfig=$HOME/.kube/karmada.config -n karmada-system
 ```
+
+If you installed Karmada with the patched flow that generates dashboard-specific certs (for example, `karmada-dashboard-client.*` under `${HOME}/.karmada`), you can generate an independent dashboard kubeconfig secret with:
+```
+hack/generate-karmada-dashboard-kubeconfig.sh "$HOME/.kube/karmada.config" karmada-host
+```
+This command creates `karmada-dashboard-config` in `karmada-system` and can be used as a standalone post-Karmada installation step.
 
 Deploy Karmada Dashboard:
 ```
