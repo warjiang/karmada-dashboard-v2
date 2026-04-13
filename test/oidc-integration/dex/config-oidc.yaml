@@ -1,0 +1,38 @@
+issuer: http://localhost:5556/dex
+
+storage:
+  type: memory
+
+web:
+  http: 0.0.0.0:5556
+
+oauth2:
+  skipApprovalScreen: true
+
+staticClients:
+- id: karmada-dashboard
+  redirectURIs:
+  - 'http://localhost:8000/login/callback'
+  name: 'Karmada Dashboard'
+  secret: dashboard-secret-key
+
+connectors:
+- type: oidc
+  id: mock-account-service
+  name: Mock Account Service
+  config:
+    issuer: http://host.docker.internal:5555
+    clientID: dex-client
+    clientSecret: dex-secret
+    redirectURI: http://localhost:5556/dex/callback
+    scopes:
+    - openid
+    - email
+    - profile
+    - groups
+    getUserInfo: true
+    insecureSkipEmailVerified: true
+    insecureEnableGroups: true
+    claimMapping:
+      email: email
+      groups: groups
