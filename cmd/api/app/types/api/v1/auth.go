@@ -37,3 +37,20 @@ type ServiceAccount struct {
 	Name string `json:"name"`
 	UID  string `json:"uid"`
 }
+
+// OIDCLoginResponse is the response for OIDC login initiation.
+type OIDCLoginResponse struct {
+	AuthURL string `json:"authUrl"`
+	State   string `json:"state"`
+}
+
+// OIDCCallbackRequest is the request for OIDC callback.
+type OIDCCallbackRequest struct {
+	Code  string `form:"code" binding:"required"`
+	State string `form:"state" binding:"required"`
+}
+
+// OIDCCallbackResponse is the response for OIDC callback.
+type OIDCCallbackResponse struct {
+	Token string `json:"token"`
+}

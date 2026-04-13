@@ -45,3 +45,6 @@ test-results/
 playwright-report/
 playwright/.cache/
 
+.trae
+.agents
+.spec-workflow

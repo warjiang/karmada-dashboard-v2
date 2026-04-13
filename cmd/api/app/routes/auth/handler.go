@@ -54,4 +54,8 @@ func handleMe(c *gin.Context) {
 func init() {
 	router.V1().POST("/login", handleLogin)
 	router.V1().GET("/me", handleMe)
+
+	// OIDC routes bypass AuthMiddleware - registered directly on router
+	router.Router().GET("/api/v1/auth/oidc/login", handleOIDCLogin)
+	router.Router().GET("/api/v1/auth/oidc/callback", handleOIDCCallback)
 }

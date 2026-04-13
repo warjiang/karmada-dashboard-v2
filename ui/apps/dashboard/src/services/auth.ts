@@ -38,3 +38,22 @@ export async function Me() {
   >(`me`);
   return resp.data;
 }
+
+export async function GetOIDCLoginURL() {
+  const resp = await karmadaClient.get<
+    IResponse<{
+      authUrl: string;
+      state: string;
+    }>
+  >(`/auth/oidc/login`);
+  return resp.data;
+}
+
+export async function OIDCCallback(code: string, state: string) {
+  const resp = await karmadaClient.get<
+    IResponse<{
+      token: string;
+    }>
+  >(`/auth/oidc/callback`, { params: { code, state } });
+  return resp.data;
+}

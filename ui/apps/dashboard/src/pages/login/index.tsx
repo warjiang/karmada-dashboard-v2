@@ -19,7 +19,7 @@ import { Alert, Button, Card, Collapse, Input, message } from 'antd';
 import styles from './index.module.less';
 import { cn } from '@/utils/cn.ts';
 import { useState } from 'react';
-import { Login } from '@/services/auth.ts';
+import { GetOIDCLoginURL, Login } from '@/services/auth.ts';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/auth';
 
@@ -28,6 +28,25 @@ const LoginPage = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const { setToken } = useAuth();
+
+  const handleOIDCLogin = async () => {
+    try {
+      const ret = await GetOIDCLoginURL();
+      if (ret.code === 200 && ret.data) {
+        sessionStorage.setItem('oidc_state', ret.data.state);
+        window.location.href = ret.data.authUrl;
+      } else {
+        await messageApi.error(
+          i18nInstance.t('oidc_login_failed', '企业登录失败，请重试'),
+        );
+      }
+    } catch (e) {
+      await messageApi.error(
+        i18nInstance.t('oidc_login_error', '企业登录失败'),
+      );
+    }
+  };
+
   return (
     <div className={'h-screen w-screen  bg-[#FAFBFC]'}>
       <div className="h-full w-full flex justify-center items-center ">
@@ -115,6 +134,13 @@ const LoginPage = () => {
               }}
             >
               {i18nInstance.t('402d19e50fff44c827a4f3b608bd5812', '登录')}
+            </Button>
+            <Button
+              className={'ml-2'}
+              data-testid="oidc-login-button"
+              onClick={handleOIDCLogin}
+            >
+              {i18nInstance.t('enterprise_login', '企业登录')}
             </Button>
           </div>
         </Card>
