@@ -97,7 +97,9 @@ func generateAPIProxy(remoteURL string, director func(*http.Request, *gin.Contex
 	}
 
 	return func(c *gin.Context) {
-		if c.Request.Header.Get("Authorization") == "" && c.Query("Authorization") == "" {
+		if c.Request.Header.Get("Authorization") == "" &&
+			c.Query("Authorization") == "" &&
+			!isAnonymousProxyPath(c.Request.URL.Path) {
 			c.String(http.StatusUnauthorized, "Forbidden")
 			c.Abort()
 			return
@@ -112,6 +114,19 @@ func generateAPIProxy(remoteURL string, director func(*http.Request, *gin.Contex
 		}
 		proxy.ServeHTTP(c.Writer, c.Request)
 	}, nil
+}
+
+func isAnonymousProxyPath(reqPath string) bool {
+	switch {
+	case reqPath == "/api/v1/auth/oidc/enabled", strings.HasSuffix(reqPath, "/api/v1/auth/oidc/enabled"), strings.HasSuffix(reqPath, "/auth/oidc/enabled"):
+		return true
+	case reqPath == "/api/v1/auth/oidc/login", strings.HasSuffix(reqPath, "/api/v1/auth/oidc/login"), strings.HasSuffix(reqPath, "/auth/oidc/login"):
+		return true
+	case reqPath == "/api/v1/auth/oidc/callback", strings.HasSuffix(reqPath, "/api/v1/auth/oidc/callback"), strings.HasSuffix(reqPath, "/auth/oidc/callback"):
+		return true
+	default:
+		return false
+	}
 }
 
 func serve(opts *options.Options) {

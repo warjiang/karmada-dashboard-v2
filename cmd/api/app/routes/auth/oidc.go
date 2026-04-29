@@ -67,6 +67,14 @@ func handleOIDCLogin(c *gin.Context) {
 	common.Success(c, response)
 }
 
+// handleOIDCEnabled returns whether OIDC is enabled on this server.
+func handleOIDCEnabled(c *gin.Context) {
+	response := &v1.OIDCEnabledResponse{
+		Enabled: oidcProvider != nil,
+	}
+	common.Success(c, response)
+}
+
 // handleOIDCCallback handles the OIDC callback
 func handleOIDCCallback(c *gin.Context) {
 	if oidcProvider == nil {

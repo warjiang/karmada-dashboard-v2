@@ -18,9 +18,14 @@ package oidc
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -42,7 +47,9 @@ type Provider struct {
 	oauth2Config *oauth2.Config
 	oidcProvider *oidc.Provider
 	verifier     *oidc.IDTokenVerifier
+	stateKey     []byte
 	states       sync.Map // stores state -> expiry time for CSRF protection
+	usedStates   sync.Map // stores used state -> used time for replay protection
 }
 
 // stateEntry stores state validation data
@@ -86,6 +93,7 @@ func NewProvider(ctx context.Context, cfg *Config) (*Provider, error) {
 		oauth2Config: oauth2Config,
 		oidcProvider: provider,
 		verifier:     verifier,
+		stateKey:     deriveStateKey(cfg),
 	}
 
 	// Start background cleanup of expired states
@@ -96,12 +104,10 @@ func NewProvider(ctx context.Context, cfg *Config) (*Provider, error) {
 
 // GenerateAuthURL generates authorization URL with a random state parameter
 func (p *Provider) GenerateAuthURL() (authURL string, state string, err error) {
-	// Generate cryptographically random state
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", "", fmt.Errorf("failed to generate state: %w", err)
+	state, err = p.generateState()
+	if err != nil {
+		return "", "", err
 	}
-	state = base64.URLEncoding.EncodeToString(b)
 
 	// Store state with timestamp
 	p.states.Store(state, stateEntry{
@@ -119,20 +125,94 @@ func (p *Provider) ValidateState(state string) error {
 	if state == "" {
 		return fmt.Errorf("state parameter is empty")
 	}
+	if _, used := p.usedStates.Load(state); used {
+		return fmt.Errorf("state parameter already used")
+	}
 
-	// LoadAndDelete ensures one-time use
-	value, loaded := p.states.LoadAndDelete(state)
-	if !loaded {
+	// Prefer one-time in-memory validation when available.
+	if value, loaded := p.states.LoadAndDelete(state); loaded {
+		entry := value.(stateEntry)
+		if time.Since(entry.createdAt) > 10*time.Minute {
+			return fmt.Errorf("state parameter expired")
+		}
+		p.usedStates.Store(state, time.Now())
+		return nil
+	}
+
+	// Fallback to stateless signature validation to support multi-instance / restart scenarios.
+	if !p.validateSignedState(state, 10*time.Minute) {
 		return fmt.Errorf("invalid or expired state parameter")
 	}
-
-	// Check if state is expired (10 minutes)
-	entry := value.(stateEntry)
-	if time.Since(entry.createdAt) > 10*time.Minute {
-		return fmt.Errorf("state parameter expired")
-	}
+	p.usedStates.Store(state, time.Now())
 
 	return nil
+}
+
+func deriveStateKey(cfg *Config) []byte {
+	seed := cfg.ClientSecret
+	if seed == "" {
+		seed = cfg.ClientID + "|" + cfg.IssuerURL
+	}
+	sum := sha256.Sum256([]byte(seed))
+	return sum[:]
+}
+
+func (p *Provider) generateState() (string, error) {
+	nonce := make([]byte, 32)
+	if _, err := rand.Read(nonce); err != nil {
+		return "", fmt.Errorf("failed to generate state: %w", err)
+	}
+
+	nonceB64 := base64.RawURLEncoding.EncodeToString(nonce)
+	ts := strconv.FormatInt(time.Now().Unix(), 10)
+	payload := nonceB64 + "." + ts
+
+	mac := hmac.New(sha256.New, p.stateKey)
+	_, _ = mac.Write([]byte(payload))
+	sig := hex.EncodeToString(mac.Sum(nil))
+
+	return payload + "." + sig, nil
+}
+
+func (p *Provider) validateSignedState(state string, maxAge time.Duration) bool {
+	parts := strings.Split(state, ".")
+	if len(parts) != 3 {
+		return false
+	}
+
+	nonce := parts[0]
+	ts := parts[1]
+	sigHex := parts[2]
+
+	if nonce == "" || ts == "" || sigHex == "" {
+		return false
+	}
+
+	issuedAtUnix, err := strconv.ParseInt(ts, 10, 64)
+	if err != nil {
+		return false
+	}
+
+	issuedAt := time.Unix(issuedAtUnix, 0)
+	now := time.Now()
+	if issuedAt.After(now.Add(1*time.Minute)) {
+		return false
+	}
+	if now.Sub(issuedAt) > maxAge {
+		return false
+	}
+
+	payload := nonce + "." + ts
+	mac := hmac.New(sha256.New, p.stateKey)
+	_, _ = mac.Write([]byte(payload))
+	expectedSig := mac.Sum(nil)
+
+	providedSig, err := hex.DecodeString(sigHex)
+	if err != nil {
+		return false
+	}
+
+	return hmac.Equal(expectedSig, providedSig)
 }
 
 // ExchangeToken exchanges authorization code for tokens
@@ -177,6 +257,13 @@ func (p *Provider) cleanupExpiredStates(ctx context.Context) {
 				entry := value.(stateEntry)
 				if time.Since(entry.createdAt) > 10*time.Minute {
 					p.states.Delete(key)
+				}
+				return true
+			})
+			p.usedStates.Range(func(key, value interface{}) bool {
+				usedAt := value.(time.Time)
+				if time.Since(usedAt) > 10*time.Minute {
+					p.usedStates.Delete(key)
 				}
 				return true
 			})

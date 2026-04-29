@@ -17,6 +17,8 @@ limitations under the License.
 package client
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 
@@ -157,7 +159,8 @@ func GetClientForMemberClusterFromRequest(request *http.Request) (kubeclient.Int
 	}
 
 	// Load and return Interface for member apiserver if already exist
-	if value, ok := memberClients.Load(memberClusterName); ok {
+	cacheKey := buildMemberClientCacheKey(request, memberClusterName)
+	if value, ok := memberRequestClients.Load(cacheKey); ok {
 		if clientForMemberAPIServer, ok := value.(kubeclient.Interface); ok {
 			return clientForMemberAPIServer, nil
 		}
@@ -168,8 +171,13 @@ func GetClientForMemberClusterFromRequest(request *http.Request) (kubeclient.Int
 		klog.ErrorS(err, "Could not init kubernetes in-cluster client for member apiserver")
 		return nil, fmt.Errorf("could not init kubernetes in-cluster client for member apiserver")
 	}
-	memberClients.Store(memberClusterName, clientForMemberAPIServer)
+	memberRequestClients.Store(cacheKey, clientForMemberAPIServer)
 	return clientForMemberAPIServer, nil
+}
+
+func buildMemberClientCacheKey(request *http.Request, memberClusterName string) string {
+	tokenHash := sha256.Sum256([]byte(GetBearerToken(request)))
+	return fmt.Sprintf("%s:%s", memberClusterName, hex.EncodeToString(tokenHash[:]))
 }
 
 func clientForMemberClusterAPIServer(request *http.Request, memberClusterName string) (kubeclient.Interface, error) {

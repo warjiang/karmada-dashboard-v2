@@ -41,7 +41,8 @@ var (
 	inClusterKarmadaClient             karmadaclientset.Interface
 	inClusterClientForKarmadaAPIServer kubeclient.Interface
 	inClusterClientForMemberAPIServer  kubeclient.Interface
-	memberClients                      sync.Map
+	memberInClusterClients             sync.Map
+	memberRequestClients               sync.Map
 )
 
 type configBuilder struct {
@@ -289,7 +290,7 @@ func InClusterClientForMemberCluster(clusterName string) kubeclient.Interface {
 	}
 
 	// Load and return Interface for member apiserver if already exist
-	if value, ok := memberClients.Load(clusterName); ok {
+	if value, ok := memberInClusterClients.Load(clusterName); ok {
 		if inClusterClientForMemberAPIServer, ok = value.(kubeclient.Interface); ok {
 			return inClusterClientForMemberAPIServer
 		}
@@ -315,7 +316,7 @@ func InClusterClientForMemberCluster(clusterName string) kubeclient.Interface {
 		return nil
 	}
 	inClusterClientForMemberAPIServer = c
-	memberClients.Store(clusterName, inClusterClientForMemberAPIServer)
+	memberInClusterClients.Store(clusterName, inClusterClientForMemberAPIServer)
 	return inClusterClientForMemberAPIServer
 }
 
