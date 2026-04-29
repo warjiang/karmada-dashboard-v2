@@ -63,6 +63,10 @@ spec:
             - --tls-cert-file=/etc/karmada/pki/apiserver.crt
             - --tls-private-key-file=/etc/karmada/pki/apiserver.key
             - --tls-min-version=VersionTLS13
+            - --oidc-issuer-url=https://dex.20220625.xyz
+            - --oidc-client-id=karmada-dashboard
+            - --oidc-username-claim=sub
+            - --oidc-username-prefix=oidc:
           name: karmada-apiserver
           image: registry.k8s.io/kube-apiserver:v1.27.11
           imagePullPolicy: IfNotPresent
