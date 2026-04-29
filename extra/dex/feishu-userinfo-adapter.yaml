@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feishu-userinfo-adapter
+  namespace: dex
+data:
+  handler.sh: |
+    #!/bin/sh
+    # Minimal HTTP adapter over netcat: flatten Feishu user_info response
+    # {code,msg,data:{...}} -> {...}
+    auth=""
+    while IFS= read -r line; do
+      line="$(echo "$line" | tr -d '\r')"
+      [ -z "$line" ] && break
+      case "$line" in
+        Authorization:*)
+          auth="$(echo "$line" | sed 's/^Authorization:[ ]*//')"
+          ;;
+      esac
+    done
+
+    status="200 OK"
+    body=""
+
+    if [ -z "$auth" ]; then
+      status="401 Unauthorized"
+      body='{"error":"missing_authorization"}'
+    else
+      resp="$(wget -qO- \
+        --header="Authorization: ${auth}" \
+        "https://open.feishu.cn/open-apis/authen/v1/user_info" 2>/dev/null || true)"
+
+      if [ -z "$resp" ]; then
+        status="502 Bad Gateway"
+        body='{"error":"empty_upstream_response"}'
+      else
+        compact="$(echo "$resp" | tr -d '\n\r\t')"
+        # Log upstream payload to container stdout for debugging.
+        echo "upstream: $compact" > /proc/1/fd/1
+
+        # Extract useful fields directly, regardless of wrapping shape.
+        open_id="$(echo "$compact" | sed -n 's/.*"open_id"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        user_id="$(echo "$compact" | sed -n 's/.*"user_id"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        union_id="$(echo "$compact" | sed -n 's/.*"union_id"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        sub_id="$(echo "$compact" | sed -n 's/.*"sub"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        name="$(echo "$compact" | sed -n 's/.*"name"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        en_name="$(echo "$compact" | sed -n 's/.*"en_name"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        email="$(echo "$compact" | sed -n 's/.*"email"[ ]*:[ ]*"\([^"]*\)".*/\1/p')"
+        email_verified="$(echo "$compact" | sed -n 's/.*"email_verified"[ ]*:[ ]*\(true\|false\).*/\1/p')"
+
+        id="$open_id"
+        [ -z "$id" ] && id="$user_id"
+        [ -z "$id" ] && id="$union_id"
+        [ -z "$id" ] && id="$sub_id"
+
+        if [ -n "$id" ]; then
+          [ -z "$email_verified" ] && email_verified="false"
+          body="{\"open_id\":\"$id\",\"name\":\"$name\",\"en_name\":\"$en_name\",\"email\":\"$email\",\"email_verified\":$email_verified}"
+        else
+          status="502 Bad Gateway"
+          body="$compact"
+        fi
+      fi
+    fi
+
+    printf 'HTTP/1.1 %s\r\n' "$status"
+    printf 'Content-Type: application/json; charset=utf-8\r\n'
+    printf 'Connection: close\r\n'
+    printf '\r\n'
+    printf '%s' "$body"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feishu-userinfo-adapter
+  namespace: dex
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: feishu-userinfo-adapter
+  template:
+    metadata:
+      labels:
+        app: feishu-userinfo-adapter
+    spec:
+      containers:
+        - name: adapter
+          image: ai-insight-cr-cn-beijing.cr.volces.com/container/dexidp/dex:v2.44.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - exec /usr/bin/nc -lk -p 8080 -e /app/handler.sh
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: app
+              mountPath: /app
+              readOnly: true
+      volumes:
+        - name: app
+          configMap:
+            name: feishu-userinfo-adapter
+            defaultMode: 0555
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feishu-userinfo-adapter
+  namespace: dex
+spec:
+  selector:
+    app: feishu-userinfo-adapter
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
