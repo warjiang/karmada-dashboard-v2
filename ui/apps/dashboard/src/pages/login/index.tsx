@@ -18,16 +18,29 @@ import i18nInstance from '@/utils/i18n';
 import { Alert, Button, Card, Collapse, Input, message } from 'antd';
 import styles from './index.module.less';
 import { cn } from '@/utils/cn.ts';
-import { useState } from 'react';
-import { GetOIDCLoginURL, Login } from '@/services/auth.ts';
+import { useEffect, useState } from 'react';
+import { GetOIDCEnabled, GetOIDCLoginURL, Login } from '@/services/auth.ts';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/components/auth';
 
 const LoginPage = () => {
   const [authToken, setAuthToken] = useState('');
+  const [oidcEnabled, setOIDCEnabled] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate();
   const { setToken } = useAuth();
+
+  useEffect(() => {
+    const loadOIDCEnabled = async () => {
+      try {
+        const ret = await GetOIDCEnabled();
+        setOIDCEnabled(ret.code === 200 && !!ret.data?.enabled);
+      } catch (_) {
+        setOIDCEnabled(false);
+      }
+    };
+    void loadOIDCEnabled();
+  }, []);
 
   const handleOIDCLogin = async () => {
     try {
@@ -135,13 +148,15 @@ const LoginPage = () => {
             >
               {i18nInstance.t('402d19e50fff44c827a4f3b608bd5812', '登录')}
             </Button>
-            <Button
-              className={'ml-2'}
-              data-testid="oidc-login-button"
-              onClick={handleOIDCLogin}
-            >
-              {i18nInstance.t('enterprise_login', '企业登录')}
-            </Button>
+            {oidcEnabled && (
+              <Button
+                className={'ml-2'}
+                data-testid="oidc-login-button"
+                onClick={handleOIDCLogin}
+              >
+                {i18nInstance.t('enterprise_login', '企业登录')}
+              </Button>
+            )}
           </div>
         </Card>
       </div>

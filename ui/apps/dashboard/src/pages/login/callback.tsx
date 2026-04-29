@@ -21,6 +21,8 @@ import { OIDCCallback } from '@/services/auth';
 import { useAuth } from '@/components/auth';
 import i18nInstance from '@/utils/i18n';
 
+const processedOIDCCallbacks = new Set<string>();
+
 const OIDCCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -43,6 +45,12 @@ const OIDCCallbackPage = () => {
         sessionStorage.removeItem('oidc_state');
         return;
       }
+
+      const callbackKey = `${code}:${state}`;
+      if (processedOIDCCallbacks.has(callbackKey)) {
+        return;
+      }
+      processedOIDCCallbacks.add(callbackKey);
 
       try {
         const ret = await OIDCCallback(code, state);
