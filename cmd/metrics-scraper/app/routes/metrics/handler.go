@@ -24,8 +24,6 @@ import (
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/scrape"
 )
 
-var requests = make(chan scrape.SaveRequest)
-
 // GetMetrics returns the metrics for the given app name
 func GetMetrics(c *gin.Context) {
 	appName := c.Param("app_name")
@@ -50,7 +48,8 @@ func GetMetrics(c *gin.Context) {
 		return
 	}
 
-	allMetrics, errors, err := scrape.FetchMetrics(c.Request.Context(), appName, requests)
+	// Pass nil for the save channel; live metrics are persisted by background goroutines only.
+	allMetrics, errors, err := scrape.FetchMetrics(c.Request.Context(), appName, nil)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"errors": errors, "error": err.Error()})
 		return

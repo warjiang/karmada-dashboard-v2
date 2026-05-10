@@ -97,16 +97,18 @@ func FetchMetrics(ctx context.Context, appName string, requests chan SaveRequest
 						mu.Unlock()
 						return
 					}
-					// Send save request without waiting
-					select {
-					case requests <- SaveRequest{
-						appName: appName,
-						podName: pod.Name,
-						data:    jsonMetrics,
-						result:  nil, // Not waiting for result
-					}:
-					case <-ctx.Done():
-						return
+					// Send save request without waiting, only if a save channel is provided.
+					if requests != nil {
+						select {
+						case requests <- SaveRequest{
+							appName: appName,
+							podName: pod.Name,
+							data:    jsonMetrics,
+							result:  nil, // Not waiting for result
+						}:
+						case <-ctx.Done():
+							return
+						}
 					}
 				}
 				mu.Lock()
@@ -183,7 +185,9 @@ func getClusterPods(ctx context.Context, cluster *v1alpha1.Cluster) ([]db.PodInf
 		return nil, fmt.Errorf("failed to create kubeclient for cluster %s: %v", cluster.Name, err)
 	}
 
-	podList, err := kubeClient.CoreV1().Pods("karmada-system").List(ctx, metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods("karmada-system").List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", db.KarmadaAgent),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods for cluster %s: %v", cluster.Name, err)
 	}
@@ -201,21 +205,8 @@ func getClusterPods(ctx context.Context, cluster *v1alpha1.Cluster) ([]db.PodInf
 }
 
 func getKarmadaAgentMetrics(ctx context.Context, podName string, clusterName string, requests chan SaveRequest) (*db.ParsedData, error) {
-	kubeClient := client.InClusterKarmadaClient()
-	clusters, err := kubeClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list clusters: %v", err)
-	}
-
-	for _, cluster := range clusters.Items {
-		if strings.EqualFold(string(cluster.Spec.SyncMode), "Pull") {
-			clusterName = cluster.Name
-			break
-		}
-	}
-
 	if clusterName == "" {
-		return nil, fmt.Errorf("no cluster in 'Pull' mode found")
+		return nil, fmt.Errorf("cluster name is required for karmada-agent metrics")
 	}
 
 	kubeconfigPath := os.Getenv("KUBECONFIG")
@@ -266,16 +257,18 @@ func getKarmadaAgentMetrics(ctx context.Context, podName string, clusterName str
 		parsedData = parsedDataPtr
 	}
 
-	// Send save request to the database worker
-	select {
-	case requests <- SaveRequest{
-		appName: db.KarmadaAgent,
-		podName: podName,
-		data:    parsedData,
-		result:  nil, // Not waiting for result
-	}:
-	case <-ctx.Done():
-		return nil, ctx.Err()
+	// Send save request to the database worker, only if a save channel is provided.
+	if requests != nil {
+		select {
+		case requests <- SaveRequest{
+			appName: db.KarmadaAgent,
+			podName: podName,
+			data:    parsedData,
+			result:  nil, // Not waiting for result
+		}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 
 	return parsedData, nil

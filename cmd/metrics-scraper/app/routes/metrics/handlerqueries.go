@@ -101,18 +101,18 @@ func queryMetricDetailsByName(c *gin.Context, tx *sql.Tx, sanitizedPodName, metr
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Metric name required for details"})
 		return
 	}
-	query := `
+	query := fmt.Sprintf(`
             SELECT 
                 m.currentTime, 
                 m.name, 
                 v.value, 
                 v.measure, 
                 v.id
-            FROM ? m
-            INNER JOIN ? v ON m.id = v.metric_id
+            FROM %s m
+            INNER JOIN %s_values v ON m.id = v.metric_id
             WHERE m.name = ?
-        `
-	rows, err := tx.Query(query, sanitizedPodName, fmt.Sprintf("%s_values", sanitizedPodName), metricName)
+        `, sanitizedPodName, sanitizedPodName)
+	rows, err := tx.Query(query, metricName)
 	if err != nil {
 		log.Printf("Error querying metric details: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query metric details"})
@@ -143,8 +143,8 @@ func queryMetricDetailsByName(c *gin.Context, tx *sql.Tx, sanitizedPodName, metr
 			return
 		}
 
-		labelsQuery := "SELECT key, value FROM ? WHERE value_id = ?"
-		labelsRows, err := tx.Query(labelsQuery, fmt.Sprintf("%s_labels", sanitizedPodName), valueID)
+		labelsQuery := fmt.Sprintf("SELECT key, value FROM %s_labels WHERE value_id = ?", sanitizedPodName)
+		labelsRows, err := tx.Query(labelsQuery, valueID)
 		if err != nil {
 			log.Printf("Error querying labels: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query labels"})
@@ -187,13 +187,13 @@ func queryMetricDetailsByName(c *gin.Context, tx *sql.Tx, sanitizedPodName, metr
 
 func queryMetricDetails(c *gin.Context, appName string) {
 	// Handle metricsdetails query type
-	db, err := sql.Open("sqlite", strings.ReplaceAll(appName, "-", "_")+".db")
+	sanitizedName := strings.ReplaceAll(appName, "-", "_")
+	db, err := scrape.GetDB(sanitizedName)
 	if err != nil {
 		log.Printf("Error opening database: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open database"})
 		return
 	}
-	defer db.Close()
 
 	// Get all relevant tables
 	rows, err := db.Query(`

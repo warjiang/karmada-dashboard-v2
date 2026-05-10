@@ -85,6 +85,11 @@ export default defineConfig(({ mode }) => {
           secure: false,
           ws: true,
         },
+        '^/metrics-scraper/.*': {
+          target: 'http://localhost:8001',
+          changeOrigin: true,
+          rewrite: (path: string) => path.replace(/^\/metrics-scraper/, ''),
+        },
       },
     },
   };

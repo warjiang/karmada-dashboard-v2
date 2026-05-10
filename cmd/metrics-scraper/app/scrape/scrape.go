@@ -66,7 +66,7 @@ func startAppMetricsFetcher(appName string) {
 
 			syncTrigger, ok := syncTriggerVal.(int)
 			if !ok || syncTrigger != 1 {
-				return
+				continue
 			}
 
 			go func(ctx context.Context) {
