@@ -1,0 +1,23 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: karmada-dashboard
+  namespace: argocd
+spec:
+  project: karmada-dashboard
+  source:
+    repoURL: https://github.com/karmada-io/dashboard.git
+    targetRevision: main
+    path: charts/karmada-dashboard
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: karmada-dashboard
+  syncPolicy:
+    automated: null
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
