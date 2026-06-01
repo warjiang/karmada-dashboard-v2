@@ -20,15 +20,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclient "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/db"
 	"github.com/karmada-io/dashboard/pkg/client"
@@ -73,17 +70,14 @@ func FetchMetrics(ctx context.Context, appName string, requests chan SaveRequest
 						return
 					}
 				} else {
+					cfg := db.GetComponentConfig(appName)
 					port := db.SchedulerPort
-					if appName == db.KarmadaControllerManager {
+					if cfg != nil {
+						port = cfg.Port
+					} else if appName == db.KarmadaControllerManager {
 						port = db.ControllerManagerPort
 					}
-					metricsOutput, err := kubeClient.CoreV1().RESTClient().Get().
-						Namespace(db.Namespace).
-						Resource("pods").
-						SubResource("proxy").
-						Name(fmt.Sprintf("%s:%s", pod.Name, port)).
-						Suffix("metrics").
-						Do(ctx).Raw() // Use the context here
+					metricsOutput, err := getMetricsFromHostClusterPodProxy(ctx, kubeClient, pod.Name, port)
 					if err != nil {
 						mu.Lock()
 						errors = append(errors, err.Error())
@@ -97,16 +91,18 @@ func FetchMetrics(ctx context.Context, appName string, requests chan SaveRequest
 						mu.Unlock()
 						return
 					}
-					// Send save request without waiting
-					select {
-					case requests <- SaveRequest{
-						appName: appName,
-						podName: pod.Name,
-						data:    jsonMetrics,
-						result:  nil, // Not waiting for result
-					}:
-					case <-ctx.Done():
-						return
+					// Send save request without waiting, only if a save channel is provided.
+					if requests != nil {
+						select {
+						case requests <- SaveRequest{
+							appName: appName,
+							podName: pod.Name,
+							data:    jsonMetrics,
+							result:  nil, // Not waiting for result
+						}:
+						case <-ctx.Done():
+							return
+						}
 					}
 				}
 				mu.Lock()
@@ -117,6 +113,42 @@ func FetchMetrics(ctx context.Context, appName string, requests chan SaveRequest
 	}
 	wg.Wait()
 	return allMetrics, errors, nil
+}
+
+func getMetricsFromHostClusterPodProxy(ctx context.Context, kubeClient kubeclient.Interface, podName, port string) ([]byte, error) {
+	metricsOutput, err := kubeClient.CoreV1().RESTClient().Get().
+		Namespace(db.Namespace).
+		Resource("pods").
+		SubResource("proxy").
+		Name(fmt.Sprintf("%s:%s", podName, port)).
+		Suffix("metrics").
+		Do(ctx).Raw()
+	if err == nil {
+		return metricsOutput, nil
+	}
+
+	// Some apiservers may not reliably handle pod proxy with "<pod>:<port>".
+	// Fall back to "<pod>/proxy/metrics" before failing.
+	if isPodProxyPortLookupError(err) {
+		return kubeClient.CoreV1().RESTClient().Get().
+			Namespace(db.Namespace).
+			Resource("pods").
+			SubResource("proxy").
+			Name(podName).
+			Suffix("metrics").
+			Do(ctx).Raw()
+	}
+
+	return nil, err
+}
+
+func isPodProxyPortLookupError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "could not find the requested resource") ||
+		strings.Contains(msg, "not found")
 }
 
 func getKarmadaPods(ctx context.Context, appName string) (map[string][]db.PodInfo, []string) {
@@ -162,28 +194,14 @@ func getKarmadaPods(ctx context.Context, appName string) (map[string][]db.PodInf
 func getClusterPods(ctx context.Context, cluster *v1alpha1.Cluster) ([]db.PodInfo, error) {
 	fmt.Printf("Getting pods for cluster: %s\n", cluster.Name)
 
-	kubeconfigPath := os.Getenv("KUBECONFIG")
-	if kubeconfigPath == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user home directory: %v", err)
-		}
-		kubeconfigPath = filepath.Join(homeDir, ".kube", "karmada.config")
+	kubeClient := client.InClusterClientForMemberCluster(cluster.Name)
+	if kubeClient == nil {
+		return nil, fmt.Errorf("failed to create kubeclient for cluster %s", cluster.Name)
 	}
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build config for cluster %s: %v", cluster.Name, err)
-	}
-
-	config.Host = fmt.Sprintf("%s/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy", config.Host, cluster.Name)
-
-	kubeClient, err := kubeclient.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create kubeclient for cluster %s: %v", cluster.Name, err)
-	}
-
-	podList, err := kubeClient.CoreV1().Pods("karmada-system").List(ctx, metav1.ListOptions{})
+	podList, err := kubeClient.CoreV1().Pods("karmada-system").List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("app=%s", db.KarmadaAgent),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods for cluster %s: %v", cluster.Name, err)
 	}
@@ -201,42 +219,13 @@ func getClusterPods(ctx context.Context, cluster *v1alpha1.Cluster) ([]db.PodInf
 }
 
 func getKarmadaAgentMetrics(ctx context.Context, podName string, clusterName string, requests chan SaveRequest) (*db.ParsedData, error) {
-	kubeClient := client.InClusterKarmadaClient()
-	clusters, err := kubeClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list clusters: %v", err)
-	}
-
-	for _, cluster := range clusters.Items {
-		if strings.EqualFold(string(cluster.Spec.SyncMode), "Pull") {
-			clusterName = cluster.Name
-			break
-		}
-	}
-
 	if clusterName == "" {
-		return nil, fmt.Errorf("no cluster in 'Pull' mode found")
+		return nil, fmt.Errorf("cluster name is required for karmada-agent metrics")
 	}
 
-	kubeconfigPath := os.Getenv("KUBECONFIG")
-	if kubeconfigPath == "" {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get user home directory: %v", err)
-		}
-		kubeconfigPath = filepath.Join(homeDir, ".kube", "karmada.config")
-	}
-
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build config for cluster %s: %v", clusterName, err)
-	}
-
-	config.Host = fmt.Sprintf("%s/apis/cluster.karmada.io/v1alpha1/clusters/%s/proxy", config.Host, clusterName)
-
-	restClient, err := kubeclient.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create REST client for cluster %s: %v", clusterName, err)
+	restClient := client.InClusterClientForMemberCluster(clusterName)
+	if restClient == nil {
+		return nil, fmt.Errorf("failed to create REST client for cluster %s", clusterName)
 	}
 
 	metricsOutput, err := restClient.CoreV1().RESTClient().Get().
@@ -266,16 +255,18 @@ func getKarmadaAgentMetrics(ctx context.Context, podName string, clusterName str
 		parsedData = parsedDataPtr
 	}
 
-	// Send save request to the database worker
-	select {
-	case requests <- SaveRequest{
-		appName: db.KarmadaAgent,
-		podName: podName,
-		data:    parsedData,
-		result:  nil, // Not waiting for result
-	}:
-	case <-ctx.Done():
-		return nil, ctx.Err()
+	// Send save request to the database worker, only if a save channel is provided.
+	if requests != nil {
+		select {
+		case requests <- SaveRequest{
+			appName: db.KarmadaAgent,
+			podName: podName,
+			data:    parsedData,
+			result:  nil, // Not waiting for result
+		}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
 
 	return parsedData, nil

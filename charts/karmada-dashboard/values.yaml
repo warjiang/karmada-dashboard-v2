@@ -246,3 +246,72 @@ kubernetes_dashboard_api:
   service:
     type: ClusterIP
     port: 8000
+
+metrics_scraper:
+  ## @param metrics_scraper.labels labels of the metrics-scraper deployment
+  labels: {}
+  replicaCount: 1
+  ## @param metrics_scraper.podAnnotations annotations of the metrics-scraper pods
+  podAnnotations: { }
+  ## @param metrics_scraper.podLabels labels of the metrics-scraper pods
+  podLabels: { }
+  ## @param metrics_scraper.image.registry metrics-scraper image registry
+  ## @param metrics_scraper.image.repository metrics-scraper image repository
+  ## @param metrics_scraper.image.tag karmada metrics-scraper image tag (immutable tags are recommended)
+  ## @param metrics_scraper.image.pullPolicy metrics-scraper image pull policy
+  ## @param metrics_scraper.image.pullSecrets Specify docker-registry secret names as an array
+  ##
+  image:
+    registry: docker.io
+    repository: karmada/karmada-dashboard-metrics-scraper
+    tag: *karmadaDashboardImageVersion
+    pullPolicy: *karmadaDashboardImagePullPolicy
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## Example:
+    ## pullSecrets:
+    ##   - myRegistryKeySecretName
+    ##
+    pullSecrets: [ ]
+  ## @param metrics_scraper.resources resource quota of the metrics-scraper
+  resources: { }
+    # If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+  ## @param metrics_scraper.nodeSelector node selector of the metrics-scraper
+  nodeSelector: { }
+  ## @param metrics_scraper.affinity affinity of the metrics-scraper
+  affinity: { }
+  ## @param metrics_scraper.tolerations tolerations of the metrics-scraper
+  tolerations: [ ]
+  # - key: node-role.kubernetes.io/master
+  #   operator: Exists
+  ## @param metrics_scraper.strategy strategy of the metrics-scraper
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 50%
+  ## @param metrics_scraper.kubeconfigName secret name of the Karmada kubeconfig
+  kubeconfigName: karmada-kubeconfig
+  ## @param metrics_scraper.kubeconfigContext context name used in the Karmada kubeconfig
+  kubeconfigContext: karmada-apiserver
+  ## @param metrics_scraper.podDisruptionBudget
+  podDisruptionBudget: *podDisruptionBudget
+  podSecurityContext: { }
+  # fsGroup: 2000
+  securityContext: { }
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  service:
+    type: ClusterIP
+    port: 8000

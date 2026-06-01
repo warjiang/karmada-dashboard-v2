@@ -20,19 +20,18 @@ set -o pipefail
 
 REPO_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
 GOLANGCI_LINT_VER="v2.8.0"
+GOLANGCI_LINT_BIN="$(go env GOPATH)/bin/golangci-lint"
 
 cd "${REPO_ROOT}"
 
-if [ -x "$(command -v golangci-lint)" ]; then
-  echo "Using golangci-lint version:"
-  golangci-lint version
-else
-  echo "Installing golangci-lint ${GOLANGCI_LINT_VER}"
-  # https://golangci-lint.run/usage/install/#other-ci
-  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin ${GOLANGCI_LINT_VER}
-fi
+echo "Installing golangci-lint ${GOLANGCI_LINT_VER} with $(go version)"
+# Build golangci-lint with the current Go toolchain to avoid
+# "built with lower Go version than targeted module" errors.
+GOBIN="$(go env GOPATH)/bin" go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VER}"
+echo "Using golangci-lint version:"
+"${GOLANGCI_LINT_BIN}" version
 
-if golangci-lint run; then
+if "${GOLANGCI_LINT_BIN}" run; then
   echo 'Congratulations!  All Go source files have passed staticcheck.'
 else
   echo # print one empty line, separate from warning messages.
