@@ -26,6 +26,7 @@ import { Me } from '@/services/auth.ts';
 import { karmadaClient } from '@/services';
 import { useQuery } from '@tanstack/react-query';
 import { karmadaMemberClusterClient } from "@/services/base.ts";
+import { metricsScraperClient } from "@/services/metrics.ts";
 
 const AuthContext = createContext<{
   authenticated: boolean;
@@ -51,6 +52,9 @@ const AuthProvider = ({ children }: { children: ReactNode }) => {
           'Authorization'
         ] = `Bearer ${token}`;
         karmadaMemberClusterClient.defaults.headers.common[
+          'Authorization'
+        ] = `Bearer ${token}`;
+        metricsScraperClient.defaults.headers.common[
           'Authorization'
         ] = `Bearer ${token}`;
         // localStorage.setItem("token", token);
