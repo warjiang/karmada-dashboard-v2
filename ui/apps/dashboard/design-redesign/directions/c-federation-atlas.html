@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karmada · Federation Atlas</title>
+  <!--
+    ASSUMPTIONS
+    - 这是复杂企业控制面的定制方向，用户需要明确的对象层级、依赖关系和风险动作秩序。
+    - 方向锚点：IBM Carbon 团队处理复杂工具的原则；不是照搬组件，而是使用分层、直角、强标签与渐进披露。
+    - 视觉母题是“联邦地图”：左侧目录回答在哪里，中心地图回答连接，右侧决策队列回答下一步。
+  -->
+  <style>
+    :root{
+      --black:#101010;--ink:#161616;--gray-90:#262626;--gray-70:#525252;--gray-50:#8d8d8d;
+      --gray-20:#e0e0e0;--gray-10:#f4f4f4;--white:#fff;--blue:#0f62fe;--blue-hover:#0353e9;
+      --cyan:#1192e8;--good:#198038;--warn:#f1c21b;--bad:#da1e28;
+      --sans:"IBM Plex Sans","PingFang SC","Noto Sans SC",sans-serif;
+      --mono:"IBM Plex Mono","SFMono-Regular",monospace;
+    }
+    *{box-sizing:border-box}html,body{height:100%;margin:0;min-width:1120px;color:var(--ink);font:14px/1.5 var(--sans);font-synthesis:none;background:#fff}
+    button{font:inherit}.app{height:100vh;display:grid;grid-template-rows:48px 1fr;overflow:hidden}
+    .global{background:var(--black);color:#fff;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #393939}.global .menu{font-size:20px;width:40px}.global .brand{display:flex;align-items:center;gap:10px}.global img{width:27px;height:26px;object-fit:contain}.global b{font-weight:500;font-size:15px}.global .product{color:#c6c6c6;margin-left:6px}.global-actions{margin-left:auto;display:flex;height:100%}.global-actions button{border:0;border-left:1px solid #393939;background:transparent;color:#f4f4f4;padding:0 16px}.global-actions button:hover{background:#353535}
+    .body{display:grid;grid-template-columns:48px 252px minmax(650px,1fr);min-height:0}.iconrail{background:var(--gray-90);display:flex;flex-direction:column}.iconrail a{height:48px;color:#c6c6c6;display:grid;place-items:center;text-decoration:none;font:11px var(--mono);border-left:3px solid transparent}.iconrail a.active{background:#393939;border-color:var(--blue);color:#fff}.iconrail a.bottom{margin-top:auto}
+    .tree{background:var(--gray-10);border-right:1px solid #c6c6c6;overflow:auto}.scope{padding:17px 16px 15px;background:#e8e8e8;border-bottom:1px solid #c6c6c6}.scope label{display:block;color:var(--gray-70);font-size:11px;margin-bottom:5px}.scope button{width:100%;height:36px;text-align:left;border:0;border-bottom:1px solid var(--gray-50);background:#fff;padding:0 10px;display:flex;justify-content:space-between;align-items:center}.tree h3{margin:19px 16px 7px;color:var(--gray-70);font:11px var(--mono);letter-spacing:.07em;text-transform:uppercase}.tree a{min-height:39px;padding:10px 16px 9px 29px;display:block;color:#393939;text-decoration:none;border-left:3px solid transparent}.tree a.group{padding-left:16px;font-weight:600}.tree a.active{background:#fff;border-color:var(--blue);color:#0f62fe}.tree a small{display:block;color:var(--gray-50);font:10px var(--mono)}.tree .divider{border-top:1px solid #d4d4d4;margin:14px 16px}
+    main{overflow:auto;background:#fff}.titlebar{min-height:96px;padding:19px 24px 18px;border-bottom:1px solid var(--gray-20);display:flex;justify-content:space-between;align-items:flex-end}.crumb{font-size:12px;color:var(--gray-70);margin-bottom:5px}.titlebar h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;margin:0;font-weight:400}.titlebar p{margin:4px 0 0;color:var(--gray-70)}.actions{display:flex}.secondary,.primary{height:40px;border:1px solid var(--blue);padding:0 15px}.secondary{background:#fff;color:var(--blue)}.primary{background:var(--blue);color:#fff}.primary:hover{background:var(--blue-hover)}
+    .summary{display:grid;grid-template-columns:1.4fr repeat(3,1fr);border-bottom:1px solid var(--gray-20)}.summary>div{min-height:82px;padding:14px 17px;border-right:1px solid var(--gray-20)}.summary>div:last-child{border:0}.summary label{display:block;color:var(--gray-70);font-size:11px}.summary b{display:block;font:23px var(--mono);font-weight:400;margin-top:6px}.summary .headline{background:#edf5ff}.summary .headline b{font-family:var(--sans);font-size:19px;color:var(--good);font-weight:600}.summary .headline b:before{content:"";display:inline-block;width:9px;height:9px;background:var(--good);margin-right:9px}
+    .atlas-grid{display:grid;grid-template-columns:minmax(520px,1.2fr) minmax(300px,.8fr);border-bottom:1px solid var(--gray-20)}.map{min-height:360px;border-right:1px solid var(--gray-20);position:relative;background-image:linear-gradient(#ececec 1px,transparent 1px),linear-gradient(90deg,#ececec 1px,transparent 1px);background-size:40px 40px;overflow:hidden}.section-label{position:absolute;top:16px;left:18px;font:11px var(--mono);letter-spacing:.08em;text-transform:uppercase;background:#fff;padding:3px 5px}.core{position:absolute;left:11%;top:39%;width:152px;height:100px;background:var(--black);color:#fff;padding:16px}.core small,.node small{font:10px var(--mono);color:#a8a8a8}.core b{display:block;font-size:16px;margin:9px 0 2px}.core span{color:#78a9ff;font-size:12px}.lane{position:absolute;height:2px;background:#78a9ff;left:calc(11% + 152px);right:18%;top:49%}.lane:before,.lane:after{content:"";position:absolute;top:-4px;width:10px;height:10px;background:var(--blue)}.lane:before{left:0}.lane:after{right:0}.branch{position:absolute;width:2px;background:#78a9ff;right:18%;top:23%;height:53%}.node{position:absolute;right:5%;width:156px;height:66px;background:#fff;border-left:4px solid var(--good);box-shadow:0 0 0 1px #c6c6c6;padding:11px 12px}.node b{display:block;margin:4px 0 1px}.n1{top:17%}.n2{top:42%}.n3{top:67%;border-left-color:var(--warn)}.node .tag{float:right;color:var(--gray-70);font:9px var(--mono)}
+    .decision{min-height:360px}.decision-head{height:48px;border-bottom:1px solid var(--gray-20);padding:0 16px;display:flex;align-items:center;justify-content:space-between}.decision-head b{font-size:14px}.decision-head span{background:var(--warn);padding:2px 6px;font:10px var(--mono)}.task{min-height:104px;padding:14px 16px;border-bottom:1px solid var(--gray-20);display:grid;grid-template-columns:4px 1fr;gap:12px}.task .sev{background:var(--warn)}.task .sev.good{background:var(--good)}.task time{float:right;color:var(--gray-50);font:10px var(--mono)}.task label{color:var(--gray-70);font:10px var(--mono);text-transform:uppercase}.task h3{font-size:14px;margin:4px 0}.task p{margin:0;color:var(--gray-70);font-size:12px}.task a{display:inline-block;color:var(--blue);margin-top:7px;text-decoration:none;font-size:12px}
+    .resources{padding:20px 24px 28px}.resource-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:12px}.resource-head h2{font-size:18px;margin:0;font-weight:500}.resource-head p{margin:3px 0 0;color:var(--gray-70)}.filters{display:flex}.filters button{height:34px;border:1px solid var(--gray-50);border-right:0;background:#fff;padding:0 11px}.filters button:last-child{border-right:1px solid var(--gray-50)}.filters .selected{background:var(--gray-90);color:#fff}
+    table{width:100%;border-collapse:collapse;border-top:1px solid var(--gray-90)}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--gray-20);font-size:12px}th{height:40px;background:var(--gray-10);font-weight:600;color:#393939}tbody tr:hover{background:#eef5ff}.resource-name{font-weight:600}.resource-name a{color:var(--blue);text-decoration:none}.status{font-weight:600}.status:before{content:"";display:inline-block;width:7px;height:7px;background:var(--good);margin-right:7px}.status.warn:before{background:var(--warn)}.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}.more{border:0;background:none;font-size:18px;letter-spacing:.1em}
+    .state-note{margin:18px 0 0;border-left:4px solid var(--blue);background:#edf5ff;padding:12px 14px;font-size:12px;color:#334b61}.state-note b{color:var(--ink)}
+    @media(max-width:1240px){.body{grid-template-columns:48px 218px 1fr}.atlas-grid{grid-template-columns:1fr}.map{border-right:0;border-bottom:1px solid var(--gray-20)}.decision{display:none}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="global"><div class="menu">☰</div><div class="brand"><img src="../../public/logo.svg" alt="Karmada"/><b>Karmada</b><span class="product">Dashboard</span></div><div class="global-actions"><button>⌕ Search</button><button>Terminal</button><button>Help</button><button>SA ▾</button></div></header>
+    <div class="body">
+      <nav class="iconrail"><a class="active" href="#">01</a><a href="#">02</a><a href="#">03</a><a href="#">04</a><a class="bottom" href="#">⚙</a></nav>
+      <aside class="tree">
+        <div class="scope"><label>Current scope</label><button>Global fleet <span>⌄</span></button></div>
+        <h3>Observe</h3><a class="group active" href="#">Fleet overview<small>3 clusters · 1 attention</small></a><a href="#">Topology</a><a href="#">Metrics</a>
+        <h3>Operate</h3><a class="group" href="#">Resources</a><a href="#">Namespaces</a><a href="#">Workloads</a><a href="#">Services</a><a href="#">Config & secrets</a>
+        <h3>Govern</h3><a class="group" href="#">Policies</a><a href="#">Propagation</a><a href="#">Overrides</a><div class="divider"></div><a class="group" href="#">Member clusters<small>member1 · member2 · member3</small></a>
+      </aside>
+
+      <main>
+        <header class="titlebar"><div><div class="crumb">Fleet / Overview</div><h1>Federation atlas</h1><p>Understand placement, health, and pending decisions across the active fleet.</p></div><div class="actions"><button class="secondary">Open terminal</button><button class="primary">Create resource</button></div></header>
+        <section class="summary">
+          <div class="headline"><label>Federation state</label><b>Operational</b></div>
+          <div><label>Member clusters</label><b>3 / 3</b></div><div><label>Nodes ready</label><b>3 / 3</b></div><div><label>Scheduled pods</label><b>38 / 330</b></div>
+        </section>
+
+        <section class="atlas-grid">
+          <article class="map"><span class="section-label">Live federation map</span><div class="core"><small>CONTROL PLANE</small><b>Karmada</b><span>v1.17.0 · Running</span></div><i class="lane"></i><i class="branch"></i>
+            <div class="node n1"><span class="tag">PUSH</span><small>MEMBER CLUSTER</small><b>member1</b><span>Ready · 1 node</span></div>
+            <div class="node n2"><span class="tag">PUSH</span><small>MEMBER CLUSTER</small><b>member2</b><span>Ready · 1 node</span></div>
+            <div class="node n3"><span class="tag">PULL</span><small>MEMBER CLUSTER</small><b>member3</b><span>Metrics delayed</span></div>
+          </article>
+          <aside class="decision"><div class="decision-head"><b>Decision queue</b><span>1 OPEN</span></div>
+            <article class="task"><i class="sev"></i><div><label>Observability <time>2m ago</time></label><h3>member3 metrics exceeded freshness target</h3><p>Resource state is current. Capacity analysis is using the last good sample.</p><a href="#">Review affected panels →</a></div></article>
+            <article class="task"><i class="sev good"></i><div><label>Policy <time>4m ago</time></label><h3>demo-policy completed propagation</h3><p>nginx is healthy in all three target clusters.</p><a href="#">Inspect placement →</a></div></article>
+            <article class="task"><i class="sev good"></i><div><label>Capacity <time>Today</time></label><h3>Fleet headroom is within target</h3><p>Pods use 12% of allocatable capacity; no action is required.</p></div></article>
+          </aside>
+        </section>
+
+        <section class="resources">
+          <div class="resource-head"><div><h2>Cluster inventory</h2><p>Current capacity and connectivity for active members.</p></div><div class="filters"><button class="selected">All 3</button><button>Ready 2</button><button>Attention 1</button></div></div>
+          <table><thead><tr><th>Cluster</th><th>Mode</th><th>Kubernetes</th><th>Nodes</th><th>CPU</th><th>Memory</th><th>Freshness</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="resource-name"><a href="#">member1</a></td><td class="mono">PUSH</td><td class="mono">v1.35.0</td><td class="mono">1 / 1</td><td class="mono">6.56%</td><td class="mono">0.76%</td><td class="mono">12s</td><td class="status">Ready</td><td><button class="more">···</button></td></tr>
+              <tr><td class="resource-name"><a href="#">member2</a></td><td class="mono">PUSH</td><td class="mono">v1.35.0</td><td class="mono">1 / 1</td><td class="mono">6.56%</td><td class="mono">0.76%</td><td class="mono">14s</td><td class="status">Ready</td><td><button class="more">···</button></td></tr>
+              <tr><td class="resource-name"><a href="#">member3</a></td><td class="mono">PULL</td><td class="mono">v1.35.0</td><td class="mono">1 / 1</td><td class="mono">6.56%</td><td class="mono">0.76%</td><td class="mono">2m 14s</td><td class="status warn">Metrics delayed</td><td><button class="more">···</button></td></tr>
+            </tbody>
+          </table>
+          <div class="state-note"><b>State rule:</b> permission errors, stale data, and API failures never collapse into “No data”. The table preserves scope, last good values, and a local recovery action.</div>
+        </section>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

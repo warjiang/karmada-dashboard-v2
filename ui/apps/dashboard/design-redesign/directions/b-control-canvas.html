@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karmada · Control Canvas</title>
+  <!--
+    ASSUMPTIONS
+    - 这是“查询—比较—下钻”的观测工作台，用户经常切 Cluster / Namespace / 时间范围。
+    - 方向锚点：Grafana 类 scope-first 工作台；迁移其结构，不复制其视觉皮肤。
+    - 视觉母题来自联邦航线，但表现为可筛选的 cluster lanes 与共享时间轴。
+  -->
+  <style>
+    :root{
+      --paper:#f4f7fa;--white:#fff;--ink:#14202b;--muted:#637080;--line:#d9e0e7;
+      --blue:#1781ff;--blue-deep:#1556b6;--blue-pale:#eaf4ff;--cyan:#079ba7;
+      --good:#178459;--warn:#b66b00;--bad:#c93643;
+      --sans:"Avenir Next","PingFang SC","Noto Sans SC",sans-serif;
+      --mono:"SFMono-Regular","JetBrains Mono",monospace;
+    }
+    *{box-sizing:border-box}html,body{margin:0;min-width:1120px;height:100%;background:var(--paper);color:var(--ink);font:14px/1.55 var(--sans);font-synthesis:none}
+    button,input{font:inherit}.shell{height:100vh;display:grid;grid-template-rows:54px 52px 1fr;overflow:hidden}
+    .topbar{display:flex;align-items:center;background:#111923;color:#fff;border-bottom:1px solid #283342;padding:0 20px;gap:28px}
+    .brand{display:flex;align-items:center;gap:10px;min-width:184px}.brand img{width:30px;height:28px;object-fit:contain}.brand b{font-size:16px;letter-spacing:-.02em}
+    .topnav{display:flex;height:100%;align-items:center;gap:4px}.topnav a{height:100%;display:flex;align-items:center;padding:0 14px;color:#a9b5c1;text-decoration:none;border-bottom:2px solid transparent}.topnav a.active{color:#fff;border-color:#51adff}.topnav a:hover{color:#fff}
+    .top-actions{margin-left:auto;display:flex;gap:8px}.icon-btn{height:34px;border:1px solid #394657;background:#182330;color:#dbe3eb;padding:0 12px;cursor:pointer}.avatar{width:30px;height:30px;border-radius:50%;background:#2765ff;display:grid;place-items:center;font:11px var(--mono)}
+    .scopebar{display:grid;grid-template-columns:270px 220px minmax(220px,1fr) 150px auto;align-items:center;gap:10px;background:var(--white);border-bottom:1px solid var(--line);padding:8px 18px}
+    .picker,.search,.time{height:36px;border:1px solid var(--line);background:#fff;padding:0 12px;display:flex;align-items:center;justify-content:space-between;color:#263543}.picker span,.time span{color:var(--muted);font-size:12px}.picker b,.time b{font-weight:600}.search{justify-content:flex-start;gap:9px;color:#8a96a2}.refresh{height:36px;border:1px solid var(--blue);background:var(--blue);color:#fff;padding:0 15px;font-weight:650;cursor:pointer}
+    .workbench{display:grid;grid-template-columns:176px minmax(650px,1fr) 300px;min-height:0}
+    .subnav{background:#fff;border-right:1px solid var(--line);padding:18px 12px;overflow:auto}.subnav h3{margin:0 9px 12px;font:10px var(--mono);color:#84909d;letter-spacing:.12em;text-transform:uppercase}.subnav a{display:block;padding:9px 10px;margin:2px 0;color:#455464;text-decoration:none;border-left:2px solid transparent}.subnav a.active{background:var(--blue-pale);color:var(--blue-deep);border-color:var(--blue);font-weight:650}.subnav hr{border:0;border-top:1px solid var(--line);margin:14px 9px}.cluster-key{padding:8px 10px;display:grid;grid-template-columns:9px 1fr;gap:8px;align-items:start;color:#455464}.dot{width:8px;height:8px;border-radius:50%;background:var(--good);margin-top:6px}.dot.warn{background:var(--warn)}.cluster-key small{display:block;color:#8b97a4;font:10px var(--mono)}
+    main{padding:20px;overflow:auto}.head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:15px}.head h1{font-size:25px;line-height:1.2;letter-spacing:-.03em;margin:0}.head p{margin:3px 0 0;color:var(--muted)}.state-tabs{display:flex;border:1px solid var(--line);background:#fff}.state-tabs button{height:34px;border:0;border-right:1px solid var(--line);background:#fff;color:#586675;padding:0 12px}.state-tabs button:last-child{border:0}.state-tabs .selected{background:#e8f3ff;color:var(--blue-deep);font-weight:650}
+    .health-strip{display:grid;grid-template-columns:1.1fr repeat(4,1fr);background:#fff;border:1px solid var(--line);margin-bottom:14px}.health-cell{padding:14px 16px;border-right:1px solid var(--line)}.health-cell:last-child{border:0}.health-cell label{display:block;color:#748190;font-size:11px}.health-cell b{display:block;margin-top:4px;font:21px var(--mono);font-weight:520}.health-main{background:#f1fbf6}.health-main b{font-family:var(--sans);color:var(--good)}.health-main b:before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--good);margin-right:8px}
+    .canvas{display:grid;grid-template-columns:1.35fr .65fr;gap:14px;margin-bottom:14px}.panel{background:#fff;border:1px solid var(--line)}.panel-head{height:46px;padding:0 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.panel-head b{font-size:13px}.panel-head span{color:#778493;font:10px var(--mono)}
+    .chart{height:245px;padding:18px 16px 12px;display:grid;grid-template-rows:1fr auto}.plot{position:relative;border-left:1px solid #cfd7df;border-bottom:1px solid #cfd7df;background:repeating-linear-gradient(to bottom,transparent 0,transparent 48px,#eef2f5 49px)}.line{position:absolute;left:0;right:0;height:2px;background:var(--blue);top:48%;transform:skewY(-2deg)}.line.two{background:var(--cyan);top:68%;transform:skewY(3deg)}.spike{position:absolute;width:2px;height:58px;background:var(--warn);right:22%;bottom:31%}.plot:after{content:"Metrics sample delayed";position:absolute;right:7%;top:16%;font:10px var(--mono);color:var(--warn);background:#fff6e6;padding:4px 6px;border:1px solid #f0c782}.legend{display:flex;gap:18px;padding-top:10px;color:#657280;font-size:11px}.legend i{display:inline-block;width:16px;height:2px;background:var(--blue);vertical-align:middle;margin-right:6px}.legend .l2{background:var(--cyan)}
+    .distribution{padding:17px}.barrow{margin-bottom:18px}.barrow:last-child{margin:0}.barrow div{display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px}.barrow span{color:var(--muted)}.bar{height:8px;background:#edf1f5;display:flex}.bar i{display:block;height:100%;background:var(--blue);width:var(--v)}.bar i.warn{background:var(--warn)}
+    .table{background:#fff;border:1px solid var(--line)}.table-toolbar{height:46px;padding:0 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line)}.chip{border:1px solid var(--line);background:#fff;padding:5px 9px;color:#526170}.chip.active{border-color:#8cc5ff;background:var(--blue-pale);color:var(--blue-deep)}.table-toolbar .spacer{margin-left:auto}.table-toolbar a{color:var(--blue-deep);text-decoration:none;font-size:12px}
+    table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #e7ecf1}th{color:#657383;background:#f8fafb;font-weight:600}tbody tr:hover{background:#f6faff}.name{font-weight:650;color:#1c3347}.mode{font:10px var(--mono);padding:3px 5px;background:#edf3f8}.ready{color:var(--good);font-weight:650}.delayed{color:var(--warn);font-weight:650}
+    .timeline{background:#fff;border-left:1px solid var(--line);padding:18px;overflow:auto}.timeline-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line)}.timeline-head h2{font-size:15px;margin:0}.timeline-head a{color:var(--blue-deep);font-size:11px;text-decoration:none}.event{position:relative;padding:15px 0 15px 18px;border-bottom:1px solid #e5eaf0}.event:before{content:"";position:absolute;left:0;top:20px;width:8px;height:8px;border-radius:50%;background:var(--blue)}.event.warn:before{background:var(--warn)}.event time{color:#87939f;font:10px var(--mono)}.event b{display:block;margin:4px 0 2px;font-size:13px}.event p{margin:0;color:#697684;font-size:12px}.event a{display:inline-block;margin-top:8px;color:var(--blue-deep);text-decoration:none;font-size:11px}.empty-note{margin-top:18px;padding:12px;background:#f7f9fb;border:1px dashed var(--line);color:#6b7784;font-size:11px}
+    @media(max-width:1240px){.workbench{grid-template-columns:160px 1fr}.timeline{display:none}.scopebar{grid-template-columns:220px 180px 1fr 135px auto}.canvas{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><img src="../../public/logo.svg" alt="Karmada"/><b>Karmada</b></div>
+      <nav class="topnav"><a class="active" href="#">Observe</a><a href="#">Operate</a><a href="#">Policies</a><a href="#">Configure</a></nav>
+      <div class="top-actions"><button class="icon-btn">⌘K&nbsp; Search</button><button class="icon-btn">Terminal</button><div class="avatar">SA</div></div>
+    </header>
+    <section class="scopebar">
+      <div class="picker"><span>Scope</span><b>Global fleet ⌄</b></div>
+      <div class="picker"><span>Namespace</span><b>All namespaces ⌄</b></div>
+      <div class="search">⌕&nbsp; Filter clusters, policies, workloads…</div>
+      <div class="time"><span>Range</span><b>Last 30m ⌄</b></div>
+      <button class="refresh">Refresh</button>
+    </section>
+
+    <div class="workbench">
+      <aside class="subnav">
+        <h3>Fleet views</h3><a class="active" href="#">Overview</a><a href="#">Topology</a><a href="#">Capacity</a><a href="#">Control plane</a><hr/>
+        <h3>Cluster lanes</h3>
+        <div class="cluster-key"><i class="dot"></i><div>member1<small>PUSH · READY</small></div></div>
+        <div class="cluster-key"><i class="dot"></i><div>member2<small>PUSH · READY</small></div></div>
+        <div class="cluster-key"><i class="dot warn"></i><div>member3<small>PULL · STALE METRICS</small></div></div>
+      </aside>
+
+      <main>
+        <header class="head"><div><h1>Fleet overview</h1><p>Compare health, capacity, and propagation signals on one shared timeline.</p></div><div class="state-tabs"><button class="selected">Live</button><button>Incidents</button><button>Changes</button></div></header>
+        <section class="health-strip">
+          <div class="health-cell health-main"><label>Federation state</label><b>Operational</b></div>
+          <div class="health-cell"><label>Nodes ready</label><b>3 / 3</b></div>
+          <div class="health-cell"><label>CPU allocated</label><b>3.15 / 48</b></div>
+          <div class="health-cell"><label>Memory allocated</label><b>1.40 GiB</b></div>
+          <div class="health-cell"><label>Pods scheduled</label><b>38 / 330</b></div>
+        </section>
+
+        <section class="canvas">
+          <article class="panel"><div class="panel-head"><b>Capacity signals</b><span>30 MIN · 15S INTERVAL</span></div><div class="chart"><div class="plot"><i class="line"></i><i class="line two"></i><i class="spike"></i></div><div class="legend"><span><i></i>CPU allocated</span><span><i class="l2"></i>Memory allocated</span></div></div></article>
+          <article class="panel"><div class="panel-head"><b>Workload distribution</b><span>38 PODS</span></div><div class="distribution">
+            <div class="barrow"><div><b>member1</b><span>14 pods</span></div><div class="bar"><i style="--v:78%"></i></div></div>
+            <div class="barrow"><div><b>member2</b><span>13 pods</span></div><div class="bar"><i style="--v:72%"></i></div></div>
+            <div class="barrow"><div><b>member3</b><span>11 pods</span></div><div class="bar"><i class="warn" style="--v:61%"></i></div></div>
+          </div></article>
+        </section>
+
+        <section class="table">
+          <div class="table-toolbar"><button class="chip active">All 3</button><button class="chip">Healthy 2</button><button class="chip">Needs attention 1</button><span class="spacer"></span><a href="#">Manage columns</a></div>
+          <table><thead><tr><th>Cluster</th><th>Mode</th><th>Version</th><th>Nodes</th><th>CPU</th><th>Memory</th><th>Freshness</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="name">member1</td><td><span class="mode">PUSH</span></td><td>v1.35.0</td><td>1 / 1</td><td>6.56%</td><td>0.76%</td><td>12s</td><td class="ready">Ready</td></tr>
+              <tr><td class="name">member2</td><td><span class="mode">PUSH</span></td><td>v1.35.0</td><td>1 / 1</td><td>6.56%</td><td>0.76%</td><td>14s</td><td class="ready">Ready</td></tr>
+              <tr><td class="name">member3</td><td><span class="mode">PULL</span></td><td>v1.35.0</td><td>1 / 1</td><td>6.56%</td><td>0.76%</td><td>2m 14s</td><td class="delayed">Metrics delayed</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </main>
+
+      <aside class="timeline">
+        <div class="timeline-head"><h2>Activity stream</h2><a href="#">View all</a></div>
+        <article class="event warn"><time>10:31 · SIGNAL</time><b>member3 sample became stale</b><p>Resource API remains reachable. Capacity panels are using the last known value.</p><a href="#">Inspect signal →</a></article>
+        <article class="event"><time>10:29 · POLICY</time><b>demo-policy propagated</b><p>Deployment nginx reached member1, member2 and member3.</p><a href="#">Open policy →</a></article>
+        <article class="event"><time>10:24 · WORKLOAD</time><b>nginx rollout completed</b><p>3 of 3 replicas are ready in namespace default.</p></article>
+        <div class="empty-note"><b>Partial failure pattern</b><br/>If one source fails, its panel stays in place with scope, last good value, error detail, and retry action.</div>
+      </aside>
+    </div>
+  </div>
+</body>
+</html>

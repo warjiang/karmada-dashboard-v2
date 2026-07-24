@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Karmada · Night Ops</title>
+  <!--
+    ASSUMPTIONS
+    - 这是 SRE 的常驻监控桌面，首要任务是 10 秒内确认全局健康并定位风险。
+    - mock 数据来自当前运行环境：3 个 member、3/3 nodes、38/330 pods。
+    - 视觉母题来自 Karmada 的「联邦航线」：连接线表达传播关系，不做装饰插画。
+    - 方向锚点：秒数轮盘 11 / Dark Editorial；结构是固定信号轨 + 连续扫描画布。
+  -->
+  <style>
+    :root{
+      --bg:#090d13;--panel:#0f151d;--panel-2:#121a24;--line:#24303d;
+      --ink:#f4f7fb;--muted:#8d9baa;--blue:#51adff;--blue-strong:#1781ff;
+      --good:#45c990;--warn:#e3a93b;--bad:#f16871;
+      --sans:"Avenir Next","PingFang SC","Noto Sans SC",sans-serif;
+      --mono:"SFMono-Regular","JetBrains Mono",monospace;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-width:1120px;height:100%;background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);font-synthesis:none}
+    button{font:inherit;color:inherit}
+    .app{height:100vh;display:grid;grid-template-columns:236px minmax(680px,1fr) 286px;overflow:hidden}
+    .rail{border-right:1px solid var(--line);padding:24px 18px 18px;display:flex;flex-direction:column;background:#0b1017}
+    .brand{display:flex;align-items:center;gap:12px;padding:0 8px 26px;border-bottom:1px solid var(--line)}
+    .brand img{width:34px;height:30px;object-fit:contain}
+    .brand strong{font-size:17px;letter-spacing:-.02em}.brand small{display:block;color:var(--muted);font:10px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+    .scope{margin:18px 2px 16px;padding:12px;border:1px solid #2b3b4d;background:#101923;display:flex;justify-content:space-between;align-items:center}
+    .scope span{color:var(--muted);font:10px var(--mono);text-transform:uppercase;letter-spacing:.12em}.scope b{display:block;margin-top:3px;font-size:13px}
+    .chev{color:var(--blue)}
+    nav{display:grid;gap:4px}.nav-section{margin:16px 10px 5px;color:#607083;font:10px var(--mono);letter-spacing:.14em;text-transform:uppercase}
+    nav a{height:38px;padding:0 10px;display:flex;align-items:center;gap:11px;color:#aeb9c6;text-decoration:none;border:1px solid transparent}
+    nav a:hover{border-color:var(--line);color:var(--ink)}nav a.active{color:#fff;background:#142131;border-color:#27435e}
+    .nav-mark{width:7px;height:7px;border:1px solid currentColor;border-radius:50%}.active .nav-mark{background:var(--blue);border-color:var(--blue)}
+    .rail-foot{margin-top:auto;padding:15px 10px 0;border-top:1px solid var(--line);color:#788696;font:11px var(--mono)}
+    .rail-foot b{display:block;color:#b9c4d1;font-weight:500;margin-bottom:4px}
+
+    main{overflow:auto;padding:26px 30px 40px;background-image:linear-gradient(#111a24 1px,transparent 1px),linear-gradient(90deg,#111a24 1px,transparent 1px);background-size:28px 28px}
+    .eyebrow{color:var(--blue);font:11px var(--mono);text-transform:uppercase;letter-spacing:.14em}.page-head{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:24px}
+    h1{margin:6px 0 2px;font-size:34px;line-height:1.1;letter-spacing:-.04em}.page-head p{margin:0;color:var(--muted)}
+    .actions{display:flex;gap:8px}.ghost,.primary{height:38px;padding:0 14px;border:1px solid #314152;background:#101720;cursor:pointer}.primary{background:var(--blue-strong);border-color:var(--blue-strong);font-weight:650}.ghost:hover{border-color:var(--blue)}
+    .status-line{display:grid;grid-template-columns:1.35fr 1fr;gap:12px;margin-bottom:12px}
+    .hero-status{min-height:196px;border:1px solid #2a3b4e;background:rgba(15,21,29,.95);padding:20px;position:relative;overflow:hidden}
+    .hero-status:after{content:"";position:absolute;right:-52px;bottom:-72px;width:220px;height:220px;border:1px solid #1d5e88;border-radius:50%;box-shadow:0 0 0 24px #0f1a26,0 0 0 25px #174469}
+    .status-top{display:flex;justify-content:space-between;color:var(--muted);font:11px var(--mono);text-transform:uppercase;letter-spacing:.1em}
+    .healthy{font-size:40px;line-height:1;margin:24px 0 12px;letter-spacing:-.05em}.healthy i{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--good);margin:0 12px 4px 0;box-shadow:0 0 0 5px #16372e}
+    .hero-status p{color:#a7b4c2;max-width:390px;margin:0}.hero-status strong{color:#fff}.fresh{position:absolute;bottom:18px;left:20px;color:#6f8295;font:11px var(--mono)}
+    .capacity{border:1px solid var(--line);background:rgba(15,21,29,.95);display:grid;grid-template-columns:1fr 1fr}
+    .cap{padding:18px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.cap:nth-child(2n){border-right:0}.cap:nth-child(n+3){border-bottom:0}
+    .cap label{color:#78899a;font:10px var(--mono);text-transform:uppercase;letter-spacing:.1em}.cap b{display:block;margin:8px 0 10px;font:24px var(--mono);font-weight:500}.meter{height:3px;background:#26323f}.meter i{display:block;height:100%;background:var(--blue);width:var(--v)}
+    .workspace{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+    .module{border:1px solid var(--line);background:rgba(15,21,29,.97)}.module-head{height:48px;padding:0 17px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+    .module-head strong{font-size:14px}.module-head span{color:var(--muted);font:10px var(--mono);text-transform:uppercase;letter-spacing:.1em}
+    .fleet{padding:15px 17px 17px}.cluster{display:grid;grid-template-columns:102px 1fr 92px;align-items:center;min-height:58px;border-bottom:1px solid #1c2732}.cluster:last-child{border:0}
+    .cluster-name{font-weight:650}.cluster-name small{display:block;color:var(--muted);font:10px var(--mono);margin-top:3px}.route{height:1px;background:#334454;position:relative;margin:0 14px}.route:before,.route:after{content:"";position:absolute;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--blue)}.route:before{left:0}.route:after{right:0}.route.pull:after{background:var(--warn)}
+    .cluster-stat{text-align:right;font:11px var(--mono);color:#9faebd}.cluster-stat b{color:var(--good);font-weight:500}.pull+.cluster-stat b{color:var(--warn)}
+    .changes{padding:7px 17px 14px}.change{padding:11px 0;border-bottom:1px solid #1c2732}.change:last-child{border:0}.change time{color:#657689;font:10px var(--mono)}.change b{display:block;margin:3px 0 1px}.change p{margin:0;color:var(--muted);font-size:12px}
+    .risk{color:var(--warn)}
+
+    aside{border-left:1px solid var(--line);background:#0d131a;padding:22px 18px;overflow:auto}
+    .aside-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;border-bottom:1px solid var(--line)}.aside-head h2{font-size:16px;margin:0}.badge{font:10px var(--mono);color:#0b1017;background:var(--warn);padding:3px 6px}
+    .incident{padding:16px 0;border-bottom:1px solid var(--line)}.incident .meta{display:flex;justify-content:space-between;color:#78899a;font:10px var(--mono);text-transform:uppercase}.sev{color:var(--warn)!important}.incident h3{font-size:14px;margin:8px 0 5px;line-height:1.35}.incident p{color:var(--muted);margin:0;font-size:12px}.incident button{margin-top:11px;border:0;background:none;padding:0;color:var(--blue);cursor:pointer;font:11px var(--mono)}
+    .quiet{padding:16px 0;color:#7b8997;font-size:12px}.quiet b{color:var(--good);font-weight:500}.command{margin-top:14px;padding:13px;border:1px dashed #344659;color:#a6b2bf;font:11px var(--mono)}
+    @media(max-width:1240px){.app{grid-template-columns:220px 1fr}.app>aside{display:none}.workspace{grid-template-columns:1fr}.status-line{grid-template-columns:1fr}.capacity{min-height:170px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="rail">
+      <div class="brand"><img src="../../public/logo.svg" alt="Karmada" /><div><strong>Karmada</strong><small>Federation control</small></div></div>
+      <div class="scope"><div><span>Active scope</span><b>Global fleet</b></div><b class="chev">⌄</b></div>
+      <nav>
+        <div class="nav-section">Observe</div>
+        <a class="active" href="#"><i class="nav-mark"></i>Fleet overview</a>
+        <a href="#"><i class="nav-mark"></i>Topology</a>
+        <a href="#"><i class="nav-mark"></i>Metrics</a>
+        <div class="nav-section">Operate</div>
+        <a href="#"><i class="nav-mark"></i>Resources</a>
+        <a href="#"><i class="nav-mark"></i>Policies</a>
+        <a href="#"><i class="nav-mark"></i>Member clusters</a>
+        <div class="nav-section">System</div>
+        <a href="#"><i class="nav-mark"></i>Configuration</a>
+      </nav>
+      <div class="rail-foot"><b>CONTROL PLANE · RUNNING</b>v1.17.0 · commit 4a27148c</div>
+    </aside>
+
+    <main>
+      <header class="page-head">
+        <div><span class="eyebrow">Fleet / Overview</span><h1>All systems are steady.</h1><p>Three member clusters are connected. One capacity signal needs attention.</p></div>
+        <div class="actions"><button class="ghost">Open terminal</button><button class="primary">Create resource</button></div>
+      </header>
+
+      <section class="status-line">
+        <article class="hero-status">
+          <div class="status-top"><span>Federation health</span><span>3 / 3 clusters</span></div>
+          <div class="healthy"><i></i>Operational</div>
+          <p>Control plane is running on <strong>v1.17.0</strong>. Policies are propagating without errors across all active members.</p>
+          <span class="fresh">LAST SYNC 10:33:18 · 12s AGO</span>
+        </article>
+        <article class="capacity">
+          <div class="cap"><label>Nodes</label><b>3 / 3</b><div class="meter"><i style="--v:100%"></i></div></div>
+          <div class="cap"><label>Pods</label><b>38 / 330</b><div class="meter"><i style="--v:12%"></i></div></div>
+          <div class="cap"><label>CPU</label><b>3.15 / 48</b><div class="meter"><i style="--v:7%"></i></div></div>
+          <div class="cap"><label>Memory</label><b>1.40 / 183 GiB</b><div class="meter"><i style="--v:1%"></i></div></div>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <article class="module">
+          <div class="module-head"><strong>Federation routes</strong><span>Live topology</span></div>
+          <div class="fleet">
+            <div class="cluster"><div class="cluster-name">member1<small>PUSH · v1.35.0</small></div><div class="route"></div><div class="cluster-stat"><b>READY</b><br/>1 node</div></div>
+            <div class="cluster"><div class="cluster-name">member2<small>PUSH · v1.35.0</small></div><div class="route"></div><div class="cluster-stat"><b>READY</b><br/>1 node</div></div>
+            <div class="cluster"><div class="cluster-name">member3<small>PULL · v1.35.0</small></div><div class="route pull"></div><div class="cluster-stat"><b>SYNCING</b><br/>1 node</div></div>
+          </div>
+        </article>
+        <article class="module">
+          <div class="module-head"><strong>Recent changes</strong><span>Last 30 min</span></div>
+          <div class="changes">
+            <div class="change"><time>10:29:46 · POLICY</time><b>demo-policy propagated</b><p>1 workload · 3 clusters</p></div>
+            <div class="change"><time>10:24:02 · WORKLOAD</time><b>nginx deployment healthy</b><p>default · 3/3 replicas</p></div>
+            <div class="change"><time>10:18:31 · CAPACITY</time><b class="risk">member3 metrics delayed</b><p>Latest sample is 2m 14s old</p></div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <aside>
+      <div class="aside-head"><h2>Attention queue</h2><span class="badge">1 OPEN</span></div>
+      <article class="incident"><div class="meta"><span class="sev">Stale signal</span><span>2m ago</span></div><h3>member3 metrics are delayed</h3><p>Resource state is current, but CPU and memory samples have exceeded the 90s freshness target.</p><button>Inspect member3 →</button></article>
+      <article class="incident"><div class="meta"><span>Capacity</span><span>Today</span></div><h3>Pod allocation is below 12%</h3><p>No action required. Current headroom supports the expected workload window.</p><button>Open capacity view →</button></article>
+      <div class="quiet"><b>✓ No policy conflicts</b><br/>All propagation and override policies resolved successfully.</div>
+      <div class="command">⌘K&nbsp;&nbsp;Search resources, clusters, policies…</div>
+    </aside>
+  </div>
+</body>
+</html>
