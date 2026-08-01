@@ -6,6 +6,10 @@
   "scripts": {
     "dashboard:dev": "turbo dev --filter @karmada/dashboard",
     "dashboard:build": "turbo build --filter @karmada/dashboard",
+    "design:dev": "pnpm --filter @karmada/design-redesign dev",
+    "design:start": "pnpm --filter @karmada/design-redesign start",
+    "design:build": "pnpm --filter @karmada/design-redesign build",
+    "design:preview": "pnpm --filter @karmada/design-redesign preview",
     "demos:dev": "turbo dev --filter @karmada/demos",
     "prepare": "cd .. && husky install ui/.husky",
     "dashboard": "pnpm --filter @karmada/dashboard",
