@@ -91,7 +91,14 @@ import styles from './index.module.less';
 
 const { Title, Text } = Typography;
 
-const defaultWindow = '15m';
+const windowOptions = [
+  { label: '15 minutes', value: '15m', refetchInterval: 10_000 },
+  { label: '1 hour', value: '1h', refetchInterval: 10_000 },
+  { label: '6 hours', value: '6h', refetchInterval: 30_000 },
+  { label: '24 hours', value: '24h', refetchInterval: 60_000 },
+  { label: '7 days', value: '7d', refetchInterval: 300_000 },
+] as const;
+type VisualizationWindow = (typeof windowOptions)[number]['value'];
 
 type ChartType = 'line' | 'area' | 'bar' | 'gauge';
 
@@ -290,6 +297,8 @@ const MetricsPage = () => {
     KARMADA_COMPONENTS[0].key,
   );
   const [visualizationPod, setVisualizationPod] = useState<string>('all');
+  const [visualizationWindow, setVisualizationWindow] =
+    useState<VisualizationWindow>('15m');
   const [hasInitializedPodSelection, setHasInitializedPodSelection] =
     useState<boolean>(false);
   const [editMode, setEditMode] = useState(false);
@@ -348,18 +357,20 @@ const MetricsPage = () => {
       'componentVisualization',
       activeComponent,
       visualizationPod,
-      defaultWindow,
+      visualizationWindow,
       configuredMetricsKey,
     ],
     queryFn: () =>
       GetSchedulerVisualization(activeComponent, {
-        window: defaultWindow,
+        window: visualizationWindow,
         pod: visualizationPod,
         refresh: false,
         metrics: configuredMetrics,
       }),
     enabled: !!activeComponent,
-    refetchInterval: 10_000,
+    refetchInterval:
+      windowOptions.find((option) => option.value === visualizationWindow)
+        ?.refetchInterval ?? 10_000,
   });
 
   const { data: podScopeData } = useQuery({
@@ -372,7 +383,7 @@ const MetricsPage = () => {
   const refreshVisualizationMutation = useMutation({
     mutationFn: () =>
       GetSchedulerVisualization(activeComponent, {
-        window: defaultWindow,
+        window: visualizationWindow,
         pod: visualizationPod,
         refresh: true,
         metrics: configuredMetrics,
@@ -383,7 +394,7 @@ const MetricsPage = () => {
           'componentVisualization',
           activeComponent,
           visualizationPod,
-          defaultWindow,
+          visualizationWindow,
         ],
       });
     },
@@ -1117,10 +1128,12 @@ const MetricsPage = () => {
               <Select
                 size="middle"
                 variant="filled"
-                value={defaultWindow}
-                disabled
-                options={[{ label: '15 minutes', value: defaultWindow }]}
+                value={visualizationWindow}
+                options={windowOptions.map(({ label, value }) => ({ label, value }))}
                 className={styles.windowSelect}
+                onChange={(value) =>
+                  setVisualizationWindow(value as VisualizationWindow)
+                }
               />
             </label>
 
@@ -1177,7 +1190,7 @@ const MetricsPage = () => {
           </div>
           <div className={styles.summaryItem}>
             <Text className={styles.summaryLabel}>Window</Text>
-            <Text className={styles.summaryValue}>15m</Text>
+            <Text className={styles.summaryValue}>{visualizationWindow}</Text>
           </div>
         </section>
 
@@ -1282,6 +1295,7 @@ const MetricsPage = () => {
           catalog={visualizationData?.metricsCatalog ?? []}
           component={activeComponent}
           pod={visualizationPod}
+          window={visualizationWindow}
         />
       </main>
     </Panel>

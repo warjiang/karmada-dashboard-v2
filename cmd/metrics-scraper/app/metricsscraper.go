@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/karmada-io/karmada/pkg/sharedcli/klogflag"
 	"github.com/spf13/cobra"
@@ -31,6 +30,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/router"
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/routes/metrics"
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/scrape"
+	metricstore "github.com/karmada-io/dashboard/cmd/metrics-scraper/app/store"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"
@@ -88,16 +88,24 @@ func run(ctx context.Context, opts *options.Options) error {
 		client.WithInsecureTLSSkipVerify(opts.SkipKubeApiserverTLSVerify),
 	)
 	ensureAPIServerConnectionOrDie()
-	serve(opts)
-	scrapeInterval := opts.ScrapeInterval
-	if scrapeInterval <= 0 {
-		scrapeInterval = 10 * time.Second
+	store, err := metricstore.NewVictoriaMetrics(metricstore.Config{
+		URL:                opts.VictoriaMetricsURL,
+		Timeout:            opts.VictoriaMetricsTimeout,
+		BearerTokenFile:    opts.VictoriaMetricsBearerTokenFile,
+		CAFile:             opts.VictoriaMetricsCAFile,
+		InsecureSkipVerify: opts.VictoriaMetricsInsecure,
+	})
+	if err != nil {
+		return err
 	}
-	go scrape.InitDatabase(scrapeInterval)
+	router.SetReadyCheck(store.Health)
+	if err := scrape.Init(ctx, store, opts.ScrapeInterval); err != nil {
+		return err
+	}
+	serve(opts)
 
 	config.InitDashboardConfig(client.InClusterClient(), ctx.Done())
 	<-ctx.Done()
-	os.Exit(0)
 	return nil
 }
 
@@ -139,7 +147,7 @@ func init() {
 	r.PUT("/metrics-config", metrics.SaveDashboardConfig)
 }
 
-// http://localhost:8000/api/v1/metrics/karmada-scheduler?type=metricsdetails  //from sqlite details bar
+// http://localhost:8000/api/v1/metrics/karmada-scheduler?type=metricsdetails
 
 // http://localhost:8000/api/v1/metrics/karmada-scheduler/karmada-scheduler-7bd4659f9f-hh44f?type=details&mname=workqueue_queue_duration_seconds
 

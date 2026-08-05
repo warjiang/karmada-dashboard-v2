@@ -25,20 +25,25 @@ import (
 
 // Options contains everything necessary to create and run api.
 type Options struct {
-	BindAddress                   net.IP
-	Port                          int
-	InsecureBindAddress           net.IP
-	InsecurePort                  int
-	KubeConfig                    string
-	KubeContext                   string
-	SkipKubeApiserverTLSVerify    bool
-	KarmadaKubeConfig             string
-	KarmadaContext                string
-	SkipKarmadaApiserverTLSVerify bool
-	Namespace                     string
-	ScrapeInterval                time.Duration
-	DisableCSRFProtection         bool
-	OpenAPIEnabled                bool
+	BindAddress                    net.IP
+	Port                           int
+	InsecureBindAddress            net.IP
+	InsecurePort                   int
+	KubeConfig                     string
+	KubeContext                    string
+	SkipKubeApiserverTLSVerify     bool
+	KarmadaKubeConfig              string
+	KarmadaContext                 string
+	SkipKarmadaApiserverTLSVerify  bool
+	Namespace                      string
+	ScrapeInterval                 time.Duration
+	VictoriaMetricsURL             string
+	VictoriaMetricsTimeout         time.Duration
+	VictoriaMetricsBearerTokenFile string
+	VictoriaMetricsCAFile          string
+	VictoriaMetricsInsecure        bool
+	DisableCSRFProtection          bool
+	OpenAPIEnabled                 bool
 }
 
 // NewOptions returns initialized Options.
@@ -63,6 +68,11 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.BoolVar(&o.SkipKarmadaApiserverTLSVerify, "skip-karmada-apiserver-tls-verify", false, "enable if connection with remote Karmada API server should skip TLS verify")
 	fs.StringVar(&o.Namespace, "namespace", "karmada-dashboard", "Namespace to use when accessing Dashboard specific resources, i.e. configmap")
 	fs.DurationVar(&o.ScrapeInterval, "scrape-interval", 10*time.Second, "Interval between metrics scrape cycles, e.g. 5s, 30s, 1m")
+	fs.StringVar(&o.VictoriaMetricsURL, "victoria-metrics-url", "http://karmada-dashboard-victoria-metrics:8428", "Base URL of the VictoriaMetrics single-node API")
+	fs.DurationVar(&o.VictoriaMetricsTimeout, "victoria-metrics-timeout", 10*time.Second, "Timeout for VictoriaMetrics read and write requests")
+	fs.StringVar(&o.VictoriaMetricsBearerTokenFile, "victoria-metrics-bearer-token-file", "", "File containing a bearer token for VictoriaMetrics")
+	fs.StringVar(&o.VictoriaMetricsCAFile, "victoria-metrics-ca-file", "", "CA bundle used to verify VictoriaMetrics TLS certificates")
+	fs.BoolVar(&o.VictoriaMetricsInsecure, "victoria-metrics-insecure-skip-verify", false, "Skip VictoriaMetrics TLS certificate verification")
 	fs.BoolVar(&o.DisableCSRFProtection, "disable-csrf-protection", false, "allows disabling CSRF protection")
 	fs.BoolVar(&o.OpenAPIEnabled, "openapi-enabled", false, "enables OpenAPI v2 endpoint under '/apidocs.json'")
 }

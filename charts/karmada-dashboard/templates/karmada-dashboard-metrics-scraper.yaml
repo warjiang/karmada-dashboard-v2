@@ -1,4 +1,11 @@
 {{- $name := include "karmada-dashboard.name" . -}}
+{{- if ne (int .Values.metrics_scraper.replicaCount) 1 -}}
+{{- fail "metrics_scraper.replicaCount must be 1 because metrics collection and sync switches are process-local" -}}
+{{- end -}}
+{{- $vmURL := printf "http://%s-victoria-metrics:%v" $name .Values.victoria_metrics.service.port -}}
+{{- if not .Values.victoria_metrics.enabled -}}
+{{- $vmURL = required "victoria_metrics.externalURL is required when victoria_metrics.enabled=false" .Values.victoria_metrics.externalURL -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,6 +73,18 @@ spec:
             - name: kubeconfig-secret
               subPath: kubeconfig
               mountPath: /etc/kubeconfig
+            {{- if .Values.victoria_metrics.auth.bearerTokenSecretName }}
+            - name: victoria-metrics-token
+              mountPath: /var/run/secrets/victoria-metrics/token
+              subPath: token
+              readOnly: true
+            {{- end }}
+            {{- if .Values.victoria_metrics.auth.caSecretName }}
+            - name: victoria-metrics-ca
+              mountPath: /var/run/secrets/victoria-metrics/ca.crt
+              subPath: ca.crt
+              readOnly: true
+            {{- end }}
           command:
             - karmada-dashboard-metrics-scraper
             - --karmada-kubeconfig=/etc/kubeconfig
@@ -74,10 +93,37 @@ spec:
             - --context={{ .Values.metrics_scraper.kubeconfigContext }}
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
+            - --victoria-metrics-url={{ $vmURL }}
+            - --victoria-metrics-timeout={{ .Values.victoria_metrics.requestTimeout }}
+            {{- if .Values.victoria_metrics.auth.bearerTokenSecretName }}
+            - --victoria-metrics-bearer-token-file=/var/run/secrets/victoria-metrics/token
+            {{- end }}
+            {{- if .Values.victoria_metrics.auth.caSecretName }}
+            - --victoria-metrics-ca-file=/var/run/secrets/victoria-metrics/ca.crt
+            {{- end }}
+            {{- if .Values.victoria_metrics.auth.insecureSkipVerify }}
+            - --victoria-metrics-insecure-skip-verify=true
+            {{- end }}
       volumes:
         - name: kubeconfig-secret
           secret:
             secretName: {{ .Values.metrics_scraper.kubeconfigName }}
+        {{- if .Values.victoria_metrics.auth.bearerTokenSecretName }}
+        - name: victoria-metrics-token
+          secret:
+            secretName: {{ .Values.victoria_metrics.auth.bearerTokenSecretName }}
+            items:
+              - key: {{ .Values.victoria_metrics.auth.bearerTokenSecretKey }}
+                path: token
+        {{- end }}
+        {{- if .Values.victoria_metrics.auth.caSecretName }}
+        - name: victoria-metrics-ca
+          secret:
+            secretName: {{ .Values.victoria_metrics.auth.caSecretName }}
+            items:
+              - key: {{ .Values.victoria_metrics.auth.caSecretKey }}
+                path: ca.crt
+        {{- end }}
       {{- with .Values.metrics_scraper.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

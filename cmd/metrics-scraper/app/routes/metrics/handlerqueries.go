@@ -17,271 +17,225 @@ limitations under the License.
 package metrics
 
 import (
-	"database/sql"
-	"fmt"
-	"log"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/db"
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/scrape"
+	metricstore "github.com/karmada-io/dashboard/cmd/metrics-scraper/app/store"
 )
 
-// validTableNameRe ensures a table name contains only safe identifier characters.
-var validTableNameRe = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
-
-// MetricInfo represents the information about a metric.
 type MetricInfo struct {
 	Help string `json:"help"`
 	Type string `json:"type"`
 }
 
-// QueryMetrics handles the querying of metrics.
 func QueryMetrics(c *gin.Context) {
 	appName := c.Param("app_name")
+	if db.GetComponentConfig(appName) == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported metrics component"})
+		return
+	}
 	podName := c.Param("pod_name")
-	queryType := c.Query("type")   // Use a query parameter to determine the action
-	metricName := c.Query("mname") // Optional: only needed for details
-
-	sanitizedAppName := strings.ReplaceAll(appName, "-", "_")
-	sanitizedPodName := strings.ReplaceAll(podName, "-", "_")
-
-	if !validTableNameRe.MatchString(sanitizedPodName) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid pod_name"})
-		return
-	}
-
-	db, err := scrape.GetDB(sanitizedAppName)
-	if err != nil {
-		log.Printf("Error getting database connection: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open database"})
-		return
-	}
-
-	// Add transaction for consistent reads
-	tx, err := db.Begin()
-	if err != nil {
-		log.Printf("Error starting transaction: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
-		return
-	}
-	defer func() {
-		_ = tx.Rollback()
-	}()
-
-	switch queryType {
+	switch c.Query("type") {
 	case "mname":
-		queryMetricNames(c, tx, sanitizedPodName)
+		queryMetricNames(c, appName, podName)
 	case "details":
-		queryMetricDetailsByName(c, tx, sanitizedPodName, metricName)
+		queryMetricDetailsByName(c, appName, podName, c.Query("mname"))
 	case "metricsdetails":
 		queryMetricDetails(c, appName)
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "unsupported query type"})
 	}
 }
 
-type sqlQueryer interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-}
-
-func queryWithMetadataFallback(q sqlQueryer, metadataTableName, preferredQuery, fallbackQuery string, args ...any) (*sql.Rows, error) {
-	rows, err := q.Query(preferredQuery, args...)
-	if err != nil && strings.Contains(err.Error(), "no such table: "+metadataTableName) {
-		return q.Query(fallbackQuery, args...)
-	}
-	return rows, err
-}
-
-func queryMetricNames(c *gin.Context, tx *sql.Tx, sanitizedPodName string) {
-	rows, err := tx.Query(fmt.Sprintf("SELECT DISTINCT name FROM %s", sanitizedPodName))
-	if err != nil {
-		log.Printf("Error querying metric names: %v, SQL Error: %v", err, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query metric names"})
+func queryMetricNames(c *gin.Context, appName, podName string) {
+	store := scrape.Store()
+	if store == nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "metrics store is not initialized"})
 		return
 	}
-	defer rows.Close()
-
-	var metricNames []string
-	for rows.Next() {
-		var metricName string
-		if err := rows.Scan(&metricName); err != nil {
-			log.Printf("Error scanning metric name: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan metric name"})
-			return
-		}
-		metricNames = append(metricNames, metricName)
+	end := time.Now().UTC()
+	start := end.Add(-maxVisualizationWindow)
+	selector, err := metricScopeSelector(appName, podName)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
-
+	names, err := store.LabelValues(c.Request.Context(), "__name__", selector, start, end)
+	if err != nil {
+		writeStoreError(c, err)
+		return
+	}
+	metadata, err := store.Metadata(c.Request.Context(), "")
+	if err != nil {
+		writeStoreError(c, err)
+		return
+	}
+	catalog, _ := buildMetricCatalog(names, metadata, nil)
+	if len(catalog) == 0 {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no metrics data available"})
+		return
+	}
+	metricNames := make([]string, 0, len(catalog))
+	for _, item := range catalog {
+		metricNames = append(metricNames, item.Name)
+	}
 	c.JSON(http.StatusOK, gin.H{"metricNames": metricNames})
 }
 
-func queryMetricDetailsByName(c *gin.Context, tx *sql.Tx, sanitizedPodName, metricName string) {
-	if metricName == "" {
+func queryMetricDetailsByName(c *gin.Context, appName, podName, metricName string) {
+	if !metricNamePattern.MatchString(metricName) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Metric name required for details"})
 		return
 	}
-	// Single query with JOIN to avoid N+1 queries for labels
-	query := fmt.Sprintf(`
-            SELECT 
-                m.currentTime, 
-                m.name, 
-                v.value, 
-                v.measure, 
-                v.id,
-                COALESCE(ls.key, '') AS label_key,
-                COALESCE(ls.value, '') AS label_value
-            FROM %s m
-            INNER JOIN %s_values v ON m.id = v.metric_id
-            LEFT JOIN %s_labels l ON v.id = l.value_id
-            LEFT JOIN %s_label_strings ls ON l.label_string_id = ls.id
-            WHERE m.name = ?
-            ORDER BY m.currentTime, v.id
-        `, sanitizedPodName, sanitizedPodName, sanitizedPodName, sanitizedPodName)
-	rows, err := tx.Query(query, metricName)
-	if err != nil {
-		log.Printf("Error querying metric details: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query metric details"})
+	store := scrape.Store()
+	if store == nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "metrics store is not initialized"})
 		return
 	}
-	defer rows.Close()
-
-	type MetricValue struct {
+	scopeSelector, err := metricScopeSelector(appName, podName)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	end := time.Now().UTC()
+	start := end.Add(-defaultVisualizationWindow)
+	names, err := store.LabelValues(c.Request.Context(), "__name__", scopeSelector, start, end)
+	if err != nil {
+		writeStoreError(c, err)
+		return
+	}
+	metadata, err := store.Metadata(c.Request.Context(), "")
+	if err != nil {
+		writeStoreError(c, err)
+		return
+	}
+	_, metaByName := buildMetricCatalog(names, metadata, []string{metricName})
+	metricType := normalizePrometheusType(metaByName[metricName].mtype)
+	type metricValue struct {
 		Value   string            `json:"value"`
 		Measure string            `json:"measure"`
 		Labels  map[string]string `json:"labels"`
 	}
-
-	type MetricDetails struct {
+	type metricDetails struct {
 		Name   string        `json:"name"`
-		Values []MetricValue `json:"values"`
+		Values []metricValue `json:"values"`
 	}
-
-	detailsMap := make(map[string]MetricDetails)
-	// Track values by (timeKey, valueID) to accumulate labels
-	type valueKey struct {
-		timeKey string
-		valueID int
+	details := map[string]metricDetails{}
+	appendSeries := func(series []metricstore.TimeSeries, measure string) {
+		for _, item := range series {
+			labels := publicLabels(item.Metric)
+			for _, sample := range item.Values {
+				key := sample.Timestamp.Format(time.RFC3339)
+				detail := details[key]
+				detail.Name = metricName
+				detail.Values = append(detail.Values, metricValue{Value: strconv.FormatFloat(sample.Value, 'g', -1, 64), Measure: measure, Labels: labels})
+				details[key] = detail
+			}
+		}
 	}
-	valueLabels := make(map[valueKey]map[string]string)
-	valueIndex := make(map[valueKey]*MetricValue)
-
-	for rows.Next() {
-		var currentTime time.Time
-		var name, measure, labelKey, labelValue string
-		var numericValue float64
-		var valueID int
-		if err := rows.Scan(&currentTime, &name, &numericValue, &measure, &valueID, &labelKey, &labelValue); err != nil {
-			log.Printf("Error scanning metric details: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan metric details"})
+	seriesToQuery := []struct {
+		name    string
+		measure string
+	}{{name: metricName, measure: "current_value"}}
+	switch metricType {
+	case "counter":
+		seriesToQuery[0].measure = "total"
+	case "histogram":
+		seriesToQuery = []struct {
+			name    string
+			measure string
+		}{{metricName + "_bucket", "cumulative_count"}, {metricName + "_sum", "sum"}, {metricName + "_count", "count"}}
+	case "summary":
+		seriesToQuery = []struct {
+			name    string
+			measure string
+		}{{metricName, "current_value"}, {metricName + "_sum", "sum"}, {metricName + "_count", "count"}}
+	}
+	for _, item := range seriesToQuery {
+		selector, selectorErr := metricSelector(item.name, appName, podName, nil)
+		if selectorErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": selectorErr.Error()})
 			return
 		}
-
-		timeKey := currentTime.Format(time.RFC3339)
-		vk := valueKey{timeKey: timeKey, valueID: valueID}
-
-		if _, exists := valueIndex[vk]; !exists {
-			detail, detailExists := detailsMap[timeKey]
-			if !detailExists {
-				detail = MetricDetails{
-					Name:   name,
-					Values: []MetricValue{},
-				}
-			}
-			labels := make(map[string]string)
-			mv := MetricValue{Value: strconv.FormatFloat(numericValue, 'f', -1, 64), Measure: measure, Labels: labels}
-			detail.Values = append(detail.Values, mv)
-			detailsMap[timeKey] = detail
-			valueLabels[vk] = labels
-			valueIndex[vk] = &detailsMap[timeKey].Values[len(detailsMap[timeKey].Values)-1]
+		series, queryErr := store.QueryRange(c.Request.Context(), selector, start, end, queryStep(defaultVisualizationWindow))
+		if queryErr != nil {
+			writeStoreError(c, queryErr)
+			return
 		}
-
-		if labelKey != "" {
-			valueLabels[vk][labelKey] = labelValue
-		}
+		appendSeries(series, item.measure)
 	}
-
-	c.JSON(http.StatusOK, gin.H{"details": detailsMap})
+	if len(details) == 0 {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no metric details available"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"details": details})
 }
 
 func queryMetricDetails(c *gin.Context, appName string) {
-	// Handle metricsdetails query type
-	sanitizedName := strings.ReplaceAll(appName, "-", "_")
-	db, err := scrape.GetDB(sanitizedName)
-	if err != nil {
-		log.Printf("Error opening database: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open database"})
+	store := scrape.Store()
+	if store == nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "metrics store is not initialized"})
 		return
 	}
-
-	// Get all relevant tables
-	rows, err := db.Query(`
-			SELECT name 
-			FROM sqlite_master 
-			WHERE type='table' 
-			AND name NOT LIKE '%_values' 
-			AND name NOT LIKE '%_labels' 
-			AND name NOT LIKE '%_label_strings'
-			AND name NOT LIKE '%_metadata'
-			AND name NOT LIKE '%_time_load'
-			AND name != 'sqlite_sequence'
-		`)
+	end := time.Now().UTC()
+	start := end.Add(-maxVisualizationWindow)
+	pods, err := store.LabelValues(c.Request.Context(), metricstore.PodLabel, componentSelector(appName), start, end)
 	if err != nil {
-		log.Printf("Error querying tables: %v", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query tables"})
+		writeStoreError(c, err)
 		return
 	}
-	defer rows.Close()
-
-	result := make(map[string]map[string]MetricInfo)
-
-	// Process each table (pod)
-	for rows.Next() {
-		var tableName string
-		if err := rows.Scan(&tableName); err != nil {
-			log.Printf("Error scanning table name: %v", err)
-			continue
-		}
-
-		// Get metrics for this pod
-		metadataQuery := fmt.Sprintf(`
-				SELECT DISTINCT m.name, COALESCE(md.help, ''), COALESCE(md.type, '')
-				FROM %s m
-				LEFT JOIN %s_metadata md ON m.name = md.name
-				GROUP BY m.name
-			`, tableName, tableName)
-		fallbackQuery := fmt.Sprintf(`
-				SELECT DISTINCT name, help, type 
-				FROM %s 
-				GROUP BY name
-			`, tableName)
-		metricRows, err := queryWithMetadataFallback(db, fmt.Sprintf("%s_metadata", tableName), metadataQuery, fallbackQuery)
-		if err != nil {
-			log.Printf("Error querying metrics for table %s: %v", tableName, err)
-			continue
-		}
-
-		podMetrics := make(map[string]MetricInfo)
-
-		// Process each metric
-		for metricRows.Next() {
-			var name, help, metricType string
-			if err := metricRows.Scan(&name, &help, &metricType); err != nil {
-				log.Printf("Error scanning metric info: %v", err)
-				continue
-			}
-
-			podMetrics[name] = MetricInfo{
-				Help: help,
-				Type: metricType,
-			}
-		}
-		metricRows.Close()
-
-		result[tableName] = podMetrics
+	metadata, err := store.Metadata(c.Request.Context(), "")
+	if err != nil {
+		writeStoreError(c, err)
+		return
 	}
-
+	if len(pods) == 0 {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no metrics data available"})
+		return
+	}
+	result := make(map[string]map[string]MetricInfo, len(pods))
+	hasData := false
+	for _, pod := range pods {
+		selector, selectorErr := metricScopeSelector(appName, pod)
+		if selectorErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": selectorErr.Error()})
+			return
+		}
+		names, queryErr := store.LabelValues(c.Request.Context(), "__name__", selector, start, end)
+		if queryErr != nil {
+			writeStoreError(c, queryErr)
+			return
+		}
+		catalog, _ := buildMetricCatalog(names, metadata, nil)
+		items := make(map[string]MetricInfo, len(catalog))
+		for _, metric := range catalog {
+			items[metric.Name] = MetricInfo{Help: metric.Help, Type: metric.PrometheusType}
+		}
+		hasData = hasData || len(items) > 0
+		result[strings.ReplaceAll(pod, "-", "_")] = items
+	}
+	if !hasData {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "no metrics data available"})
+		return
+	}
 	c.JSON(http.StatusOK, result)
+}
+
+func publicLabels(labels map[string]string) map[string]string {
+	result := make(map[string]string)
+	for key, value := range labels {
+		switch key {
+		case "__name__", metricstore.ComponentLabel, metricstore.PodLabel, metricstore.ClusterLabel:
+			continue
+		default:
+			result[key] = value
+		}
+	}
+	return result
 }

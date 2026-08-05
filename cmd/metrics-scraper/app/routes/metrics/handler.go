@@ -49,8 +49,8 @@ func GetMetrics(c *gin.Context) {
 		return
 	}
 
-	// Pass nil for the save channel; live metrics are persisted by background goroutines only.
-	allMetrics, errors, err := scrape.FetchMetrics(c.Request.Context(), appName, nil)
+	// Live snapshots are not persisted; background workers own ingestion.
+	allMetrics, errors, err := scrape.FetchMetrics(c.Request.Context(), appName, false)
 	if err != nil {
 		status := http.StatusBadGateway
 		if strings.Contains(strings.ToLower(err.Error()), "no pods found") {

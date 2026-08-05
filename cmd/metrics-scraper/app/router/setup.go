@@ -17,14 +17,21 @@ limitations under the License.
 package router
 
 import (
+	"context"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/pkg/environment"
 )
 
 var (
-	router *gin.Engine
-	v1     *gin.RouterGroup
+	router     *gin.Engine
+	v1         *gin.RouterGroup
+	readyMu    sync.RWMutex
+	readyCheck func(context.Context) error
 )
 
 func init() {
@@ -40,8 +47,27 @@ func init() {
 		c.String(200, "livez")
 	})
 	router.GET("/readyz", func(c *gin.Context) {
-		c.String(200, "readyz")
+		readyMu.RLock()
+		check := readyCheck
+		readyMu.RUnlock()
+		if check == nil {
+			c.String(http.StatusServiceUnavailable, "not initialized")
+			return
+		}
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+		if err := check(ctx); err != nil {
+			c.String(http.StatusServiceUnavailable, "victoriametrics unavailable")
+			return
+		}
+		c.String(http.StatusOK, "readyz")
 	})
+}
+
+func SetReadyCheck(check func(context.Context) error) {
+	readyMu.Lock()
+	readyCheck = check
+	readyMu.Unlock()
 }
 
 // V1 returns the router group for /api/v1.

@@ -834,6 +834,52 @@ api:
     type: ClusterIP
     port: 8000
 
+victoria_metrics:
+  ## @param victoria_metrics.enabled deploy a single-node VictoriaMetrics instance
+  enabled: true
+  ## @param victoria_metrics.externalURL VictoriaMetrics v1.137+ URL, required when enabled=false
+  externalURL: ""
+  ## @param victoria_metrics.requestTimeout timeout for VictoriaMetrics requests
+  requestTimeout: 10s
+  ## @param victoria_metrics.image VictoriaMetrics image configuration
+  image:
+    registry: docker.io
+    repository: victoriametrics/victoria-metrics
+    tag: v1.137.0
+    pullPolicy: *karmadaDashboardImagePullPolicy
+  ## @param victoria_metrics.retentionPeriod metrics retention period
+  retentionPeriod: 7d
+  ## @param victoria_metrics.resources VictoriaMetrics resource requests and limits
+  resources: { }
+  ## StatefulSet-created PVCs are retained by Kubernetes after Helm uninstall.
+  persistence:
+    ## @param victoria_metrics.persistence.enabled use persistent storage instead of emptyDir
+    enabled: true
+    ## @param victoria_metrics.persistence.size requested PVC size
+    size: 10Gi
+    ## @param victoria_metrics.persistence.storageClass PVC StorageClass; empty uses the cluster default
+    storageClass: ""
+    ## @param victoria_metrics.persistence.existingClaim existing PVC to mount instead of creating one
+    existingClaim: ""
+  auth:
+    ## @param victoria_metrics.auth.bearerTokenSecretName Secret containing an external VM bearer token
+    bearerTokenSecretName: ""
+    bearerTokenSecretKey: token
+    ## @param victoria_metrics.auth.caSecretName Secret containing the external VM CA bundle
+    caSecretName: ""
+    caSecretKey: ca.crt
+    insecureSkipVerify: false
+  podAnnotations: { }
+  podLabels: { }
+  podSecurityContext: { }
+  securityContext: { }
+  nodeSelector: { }
+  affinity: { }
+  tolerations: [ ]
+  service:
+    type: ClusterIP
+    port: 8428
+
 web:
   ## @param web.labels labels of the api deployment
   labels: {}

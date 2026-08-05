@@ -1,0 +1,112 @@
+{{- if .Values.victoria_metrics.enabled }}
+{{- $name := include "karmada-dashboard.name" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-victoria-metrics
+  namespace: {{ include "karmada-dashboard.namespace" . }}
+  labels:
+    {{- include "karmada-dashboard.victoria-metrics.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.victoria_metrics.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.victoria_metrics.service.port }}
+      targetPort: http
+  selector:
+    {{- include "karmada-dashboard.victoria-metrics.labels" . | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}-victoria-metrics
+  namespace: {{ include "karmada-dashboard.namespace" . }}
+  labels:
+    {{- include "karmada-dashboard.victoria-metrics.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ $name }}-victoria-metrics
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "karmada-dashboard.victoria-metrics.labels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.victoria_metrics.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "karmada-dashboard.victoria-metrics.labels" . | nindent 8 }}
+        {{- with .Values.victoria_metrics.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "karmada-dashboard.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.victoria_metrics.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: victoria-metrics
+          image: {{ include "karmada-dashboard.victoria-metrics.image" . }}
+          imagePullPolicy: {{ .Values.victoria_metrics.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.victoria_metrics.securityContext | nindent 12 }}
+          args:
+            - -httpListenAddr=:{{ .Values.victoria_metrics.service.port }}
+            - -storageDataPath=/storage
+            - -retentionPeriod={{ .Values.victoria_metrics.retentionPeriod }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.victoria_metrics.service.port }}
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.victoria_metrics.resources | nindent 12 }}
+          volumeMounts:
+            - name: storage
+              mountPath: /storage
+      {{- with .Values.victoria_metrics.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.victoria_metrics.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.victoria_metrics.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.victoria_metrics.persistence.existingClaim }}
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.victoria_metrics.persistence.existingClaim }}
+      {{- else if not .Values.victoria_metrics.persistence.enabled }}
+      volumes:
+        - name: storage
+          emptyDir: {}
+      {{- end }}
+  {{- if and .Values.victoria_metrics.persistence.enabled (not .Values.victoria_metrics.persistence.existingClaim) }}
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.victoria_metrics.persistence.storageClass }}
+        storageClassName: {{ .Values.victoria_metrics.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.victoria_metrics.persistence.size }}
+  {{- end }}
+{{- end }}
