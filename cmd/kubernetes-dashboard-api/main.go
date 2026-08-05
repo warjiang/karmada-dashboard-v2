@@ -18,8 +18,8 @@ import (
 	"crypto/elliptic"
 	"crypto/tls"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"k8s.io/dashboard/certificates"
-	"k8s.io/dashboard/certificates/ecdsa"
+	"github.com/karmada-io/dashboard/pkg/kubernetes-dashboard-common/certificates"
+	"github.com/karmada-io/dashboard/pkg/kubernetes-dashboard-common/certificates/ecdsa"
 	"net/http"
 	"time"
 

@@ -61,7 +61,7 @@ $(TARGETS):
 # Run unit tests
 .PHONY: test
 test:
-	go test ./pkg/client/...
+	go test ./pkg/client/... ./pkg/kubernetes-dashboard-common/...
 
 
 ###################
