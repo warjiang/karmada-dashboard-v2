@@ -1,0 +1,67 @@
+{{- if eq .Values.metrics_scraper.prometheus.mode "managed" }}
+{{- $name := include "karmada-dashboard.name" . -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-prometheus-config
+  namespace: {{ include "karmada-dashboard.namespace" . }}
+  labels:
+    {{- include "karmada-dashboard.metrics-scraper.labels" . | nindent 4 }}
+data:
+  prometheus.yml.tmpl: |
+    global:
+      scrape_interval: {{ .Values.metrics_scraper.prometheus.managed.scrapeInterval }}
+      evaluation_interval: {{ .Values.metrics_scraper.prometheus.managed.scrapeInterval }}
+    scrape_configs:
+      {{- range $componentName, $component := .Values.metrics_scraper.components }}
+      {{- if $component.enabled }}
+      {{- $componentNamespace := default $.Values.metrics_scraper.prometheus.managed.targetNamespace $component.namespace }}
+      {{- $selectorLabel := default "app" $component.selectorLabel | replace "." "_" | replace "/" "_" | replace "-" "_" }}
+      - job_name: karmada/{{ $componentName }}
+        scrape_interval: {{ $.Values.metrics_scraper.prometheus.managed.scrapeInterval }}
+        metrics_path: {{ $component.path | quote }}
+        scheme: {{ $component.scheme }}
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names:
+                - {{ $componentNamespace | quote }}
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_phase]
+            regex: Running
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_label_{{ $selectorLabel }}]
+            regex: {{ $component.selectorRegex | quote }}
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_ip]
+            regex: (.+)
+            target_label: __address__
+            replacement: $1:{{ $component.port }}
+          - target_label: karmada_component
+            replacement: {{ $componentName | quote }}
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: karmada_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: karmada_pod
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: instance
+          {{- if $component.memberClusterLabel }}
+          - source_labels: [__meta_kubernetes_pod_label_{{ $selectorLabel }}]
+            regex: {{ $component.selectorRegex | quote }}
+            target_label: karmada_member_cluster
+            replacement: $1
+          {{- end }}
+        {{- if eq $component.scheme "https" }}
+        __KARMADA_AUTH__
+        tls_config:
+          __KARMADA_TLS__
+          {{- if $component.serverName }}
+          server_name: {{ tpl $component.serverName $ | quote }}
+          {{- end }}
+          {{- if $component.insecureSkipVerify }}
+          insecure_skip_verify: true
+          {{- end }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
+{{- end }}

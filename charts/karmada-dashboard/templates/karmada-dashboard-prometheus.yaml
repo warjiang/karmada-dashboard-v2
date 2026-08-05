@@ -1,0 +1,185 @@
+{{- if eq .Values.metrics_scraper.prometheus.mode "managed" }}
+{{- $name := include "karmada-dashboard.name" . -}}
+{{- $targetNamespace := .Values.metrics_scraper.prometheus.managed.targetNamespace -}}
+{{- $storageType := .Values.metrics_scraper.prometheus.managed.storage.type -}}
+{{- if not (has $storageType (list "pvc" "emptyDir")) -}}
+{{- fail "metrics_scraper.prometheus.managed.storage.type must be pvc or emptyDir" -}}
+{{- end -}}
+{{- $targetNamespaces := dict -}}
+{{- range $componentName, $component := .Values.metrics_scraper.components -}}
+{{- if $component.enabled -}}
+{{- $componentNamespace := default $targetNamespace $component.namespace -}}
+{{- $_ := set $targetNamespaces $componentNamespace true -}}
+{{- end -}}
+{{- end -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}-prometheus
+  namespace: {{ include "karmada-dashboard.namespace" . }}
+  labels:
+    {{- include "karmada-dashboard.metrics-scraper.labels" . | nindent 4 }}
+---
+{{- range $namespace, $_ := $targetNamespaces }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}-prometheus-discovery
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "karmada-dashboard.metrics-scraper.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}-prometheus-discovery
+  namespace: {{ $namespace }}
+  labels:
+    {{- include "karmada-dashboard.metrics-scraper.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}-prometheus-discovery
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}-prometheus
+    namespace: {{ include "karmada-dashboard.namespace" $ }}
+---
+{{- end }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}-prometheus
+  namespace: {{ include "karmada-dashboard.namespace" . }}
+  labels:
+    app: {{ $name }}-prometheus
+    {{- include "karmada-dashboard.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+  selector:
+    app: {{ $name }}-prometheus
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $name }}-prometheus
+  namespace: {{ include "karmada-dashboard.namespace" . }}
+  labels:
+    app: {{ $name }}-prometheus
+    {{- include "karmada-dashboard.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ $name }}-prometheus
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $name }}-prometheus
+  template:
+    metadata:
+      labels:
+        app: {{ $name }}-prometheus
+        {{- include "karmada-dashboard.labels" . | nindent 8 }}
+      annotations:
+        checksum/prometheus-config: {{ include (print $.Template.BasePath "/karmada-dashboard-prometheus-config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ $name }}-prometheus
+      {{- include "karmada-dashboard.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- toYaml .Values.metrics_scraper.prometheus.managed.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: prepare-config
+          image: {{ template "karmada-dashboard.metrics-scraper.image" . }}
+          imagePullPolicy: {{ .Values.metrics_scraper.image.pullPolicy }}
+          command:
+            - karmada-dashboard-metrics-scraper
+            - prepare-prometheus-config
+            - --kubeconfig=/etc/karmada/kubeconfig
+            - --context={{ .Values.metrics_scraper.kubeconfigContext }}
+            - --template=/etc/prometheus-template/prometheus.yml.tmpl
+            - --output=/etc/prometheus-generated/prometheus.yml
+            - --credentials-dir=/etc/prometheus-auth
+          volumeMounts:
+            - name: kubeconfig-secret
+              subPath: kubeconfig
+              mountPath: /etc/karmada/kubeconfig
+              readOnly: true
+            - name: prometheus-template
+              mountPath: /etc/prometheus-template
+              readOnly: true
+            - name: prometheus-generated
+              mountPath: /etc/prometheus-generated
+            - name: prometheus-auth
+              mountPath: /etc/prometheus-auth
+      containers:
+        - name: prometheus
+          image: {{ template "karmada-dashboard.prometheus.image" . }}
+          imagePullPolicy: {{ .Values.metrics_scraper.prometheus.managed.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.metrics_scraper.prometheus.managed.securityContext | nindent 12 }}
+          args:
+            - --config.file=/etc/prometheus-generated/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time={{ .Values.metrics_scraper.prometheus.managed.retention }}
+            - --web.enable-lifecycle
+          ports:
+            - name: http
+              containerPort: 9090
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.metrics_scraper.prometheus.managed.resources | nindent 12 }}
+          volumeMounts:
+            - name: prometheus-generated
+              mountPath: /etc/prometheus-generated
+              readOnly: true
+            - name: prometheus-auth
+              mountPath: /etc/prometheus-auth
+              readOnly: true
+            - name: prometheus-data
+              mountPath: /prometheus
+      volumes:
+        - name: kubeconfig-secret
+          secret:
+            secretName: {{ .Values.metrics_scraper.kubeconfigName }}
+        - name: prometheus-template
+          configMap:
+            name: {{ $name }}-prometheus-config
+        - name: prometheus-generated
+          emptyDir: {}
+        - name: prometheus-auth
+          emptyDir: {}
+        {{- if ne .Values.metrics_scraper.prometheus.managed.storage.type "pvc" }}
+        - name: prometheus-data
+          emptyDir: {}
+        {{- end }}
+  {{- if eq .Values.metrics_scraper.prometheus.managed.storage.type "pvc" }}
+  volumeClaimTemplates:
+    - metadata:
+        name: prometheus-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- if .Values.metrics_scraper.prometheus.managed.storage.storageClassName }}
+        storageClassName: {{ .Values.metrics_scraper.prometheus.managed.storage.storageClassName | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.metrics_scraper.prometheus.managed.storage.size }}
+  {{- end }}
+{{- end }}

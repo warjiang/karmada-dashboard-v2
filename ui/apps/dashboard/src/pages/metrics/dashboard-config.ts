@@ -17,6 +17,7 @@
 import type {
   KarmadaComponentKey,
   MetricCatalogItem,
+  QueryTransform,
 } from '@/services/metrics';
 
 export type ChartType = 'line' | 'area' | 'bar' | 'gauge';
@@ -30,6 +31,7 @@ export interface LabelFilter {
 export interface MetricQuery {
   metric: string;
   aggregation: AggregationType;
+  transform?: QueryTransform;
   labelFilters?: LabelFilter[];
 }
 
@@ -51,7 +53,7 @@ export interface DashboardConfig {
 }
 
 const STORAGE_PREFIX = 'karmada-metrics-dashboard:';
-const CONFIG_VERSION = 1;
+const CONFIG_VERSION = 2;
 const DEFAULT_PANEL_LIMIT = 12;
 
 /**
@@ -87,20 +89,6 @@ export const DEFAULT_METRIC_NAMES_BY_COMPONENT = {
     'cluster_sync_status_duration_seconds',
     'policy_apply_attempts_total',
     'resource_apply_policy_duration_seconds',
-  ],
-  'karmada-agent': [
-    'cluster_ready_state',
-    'cluster_ready_node_number',
-    'cluster_node_number',
-    'cluster_cpu_allocatable_number',
-    'cluster_cpu_allocated_number',
-    'cluster_memory_allocatable_bytes',
-    'cluster_memory_allocated_bytes',
-    'cluster_pod_allocatable_number',
-    'cluster_pod_allocated_number',
-    'cluster_sync_status_duration_seconds',
-    'sync_workload_duration_seconds',
-    'workqueue_depth',
   ],
   'karmada-aggregated-apiserver': [
     'apiserver_request_total',
@@ -165,21 +153,7 @@ export const DEFAULT_METRIC_NAMES_BY_COMPONENT = {
     'workqueue_retries_total',
     'karmada_build_info',
   ],
-  'karmada-scheduler-estimator-member1': [
-    'karmada_scheduler_estimator_estimating_request_total',
-    'karmada_scheduler_estimator_estimating_algorithm_duration_seconds',
-    'karmada_scheduler_estimator_estimating_plugin_execution_duration_seconds',
-    'karmada_scheduler_estimator_estimating_plugin_extension_point_duration_seconds',
-    'karmada_build_info',
-  ],
-  'karmada-scheduler-estimator-member2': [
-    'karmada_scheduler_estimator_estimating_request_total',
-    'karmada_scheduler_estimator_estimating_algorithm_duration_seconds',
-    'karmada_scheduler_estimator_estimating_plugin_execution_duration_seconds',
-    'karmada_scheduler_estimator_estimating_plugin_extension_point_duration_seconds',
-    'karmada_build_info',
-  ],
-  'karmada-scheduler-estimator-member3': [
+  'karmada-scheduler-estimator': [
     'karmada_scheduler_estimator_estimating_request_total',
     'karmada_scheduler_estimator_estimating_algorithm_duration_seconds',
     'karmada_scheduler_estimator_estimating_plugin_execution_duration_seconds',
@@ -234,8 +208,27 @@ export function loadDashboardConfig(component: string): DashboardConfig | null {
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${component}`);
     if (!raw) return null;
     const config = JSON.parse(raw) as DashboardConfig;
-    if (config.version !== CONFIG_VERSION) return null;
-    return config;
+    if (config.version !== CONFIG_VERSION && config.version !== 1) return null;
+    return {
+      ...config,
+      version: CONFIG_VERSION,
+      panels: config.panels.map((panel) => ({
+        ...panel,
+        query: panel.query
+          ? {
+              ...panel.query,
+              transform:
+                panel.query.aggregation === 'rate'
+                  ? 'rate'
+                  : (panel.query.transform ?? 'auto'),
+              aggregation:
+                panel.query.aggregation === 'rate'
+                  ? 'sum'
+                  : panel.query.aggregation,
+            }
+          : undefined,
+      })),
+    };
   } catch {
     return null;
   }

@@ -25,20 +25,26 @@ import (
 
 // Options contains everything necessary to create and run api.
 type Options struct {
-	BindAddress                   net.IP
-	Port                          int
-	InsecureBindAddress           net.IP
-	InsecurePort                  int
-	KubeConfig                    string
-	KubeContext                   string
-	SkipKubeApiserverTLSVerify    bool
-	KarmadaKubeConfig             string
-	KarmadaContext                string
-	SkipKarmadaApiserverTLSVerify bool
-	Namespace                     string
-	ScrapeInterval                time.Duration
-	DisableCSRFProtection         bool
-	OpenAPIEnabled                bool
+	BindAddress                net.IP
+	Port                       int
+	InsecureBindAddress        net.IP
+	InsecurePort               int
+	KubeConfig                 string
+	KubeContext                string
+	SkipKubeApiserverTLSVerify bool
+	Namespace                  string
+	PrometheusURL              string
+	PrometheusQueryTimeout     time.Duration
+	PrometheusMaxQueryRange    time.Duration
+	PrometheusBearerTokenFile  string
+	PrometheusCAFile           string
+	PrometheusCertFile         string
+	PrometheusKeyFile          string
+	PrometheusServerName       string
+	PrometheusInsecureTLS      bool
+	MetricsComponents          []string
+	DisableCSRFProtection      bool
+	OpenAPIEnabled             bool
 }
 
 // NewOptions returns initialized Options.
@@ -58,11 +64,28 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.KubeConfig, "kubeconfig", "", "Path to the host cluster kubeconfig file.")
 	fs.StringVar(&o.KubeContext, "context", "", "The name of the kubeconfig context to use.")
 	fs.BoolVar(&o.SkipKubeApiserverTLSVerify, "skip-kube-apiserver-tls-verify", false, "enable if connection with remote Kubernetes API server should skip TLS verify")
-	fs.StringVar(&o.KarmadaKubeConfig, "karmada-kubeconfig", "", "Path to the karmada control plane kubeconfig file.")
-	fs.StringVar(&o.KarmadaContext, "karmada-context", "", "The name of the karmada-kubeconfig context to use.")
-	fs.BoolVar(&o.SkipKarmadaApiserverTLSVerify, "skip-karmada-apiserver-tls-verify", false, "enable if connection with remote Karmada API server should skip TLS verify")
 	fs.StringVar(&o.Namespace, "namespace", "karmada-dashboard", "Namespace to use when accessing Dashboard specific resources, i.e. configmap")
-	fs.DurationVar(&o.ScrapeInterval, "scrape-interval", 10*time.Second, "Interval between metrics scrape cycles, e.g. 5s, 30s, 1m")
+	fs.StringVar(&o.PrometheusURL, "prometheus-url", "http://karmada-dashboard-prometheus:9090", "Prometheus HTTP API endpoint")
+	fs.DurationVar(&o.PrometheusQueryTimeout, "prometheus-query-timeout", 15*time.Second, "Timeout for Prometheus API requests")
+	fs.DurationVar(&o.PrometheusMaxQueryRange, "prometheus-max-query-range", 7*24*time.Hour, "Maximum time range accepted by the metrics API")
+	fs.StringVar(&o.PrometheusBearerTokenFile, "prometheus-bearer-token-file", "", "File containing a bearer token for the Prometheus API")
+	fs.StringVar(&o.PrometheusCAFile, "prometheus-ca-file", "", "CA certificate used to verify the Prometheus API")
+	fs.StringVar(&o.PrometheusCertFile, "prometheus-client-cert-file", "", "Client certificate for the Prometheus API")
+	fs.StringVar(&o.PrometheusKeyFile, "prometheus-client-key-file", "", "Client key for the Prometheus API")
+	fs.StringVar(&o.PrometheusServerName, "prometheus-server-name", "", "TLS server name for the Prometheus API")
+	fs.BoolVar(&o.PrometheusInsecureTLS, "prometheus-insecure-tls", false, "Skip verification of the Prometheus API certificate")
+	fs.StringSliceVar(&o.MetricsComponents, "metrics-components", []string{
+		"karmada-scheduler",
+		"karmada-controller-manager",
+		"karmada-scheduler-estimator",
+		"karmada-aggregated-apiserver",
+		"karmada-apiserver",
+		"karmada-descheduler",
+		"karmada-kube-controller-manager",
+		"karmada-metrics-adapter",
+		"karmada-search",
+		"karmada-webhook",
+	}, "Enabled component names, matching the karmada_component Prometheus label")
 	fs.BoolVar(&o.DisableCSRFProtection, "disable-csrf-protection", false, "allows disabling CSRF protection")
 	fs.BoolVar(&o.OpenAPIEnabled, "openapi-enabled", false, "enables OpenAPI v2 endpoint under '/apidocs.json'")
 }

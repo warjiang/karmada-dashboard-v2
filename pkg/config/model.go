@@ -52,6 +52,7 @@ type MetricLabelFilter struct {
 type MetricPanelQuery struct {
 	Metric       string              `yaml:"metric" json:"metric"`
 	Aggregation  string              `yaml:"aggregation" json:"aggregation"`
+	Transform    string              `yaml:"transform,omitempty" json:"transform,omitempty"`
 	LabelFilters []MetricLabelFilter `yaml:"label_filters,omitempty" json:"labelFilters,omitempty"`
 }
 

@@ -76,6 +76,9 @@ Deploy Karmada Dashboard:
 kubectl apply -k artifacts/overlays/nodeport-mode
 ```
 
+For the Helm-based metrics v2 installation with managed or external
+Prometheus, see [Prometheus-backed control-plane metrics](docs/metrics-prometheus.md).
+
 This will deploy two components in `karmada-system` namespace:
 
 ```

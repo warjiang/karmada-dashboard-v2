@@ -24,7 +24,6 @@ import {
   Popconfirm,
   Select,
   Space,
-  Tooltip as AntTooltip,
   Typography,
   message,
   theme,
@@ -54,11 +53,12 @@ import {
 import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 
 import Panel from '@/components/panel';
-import { Icons } from '@/components/icons';
 import {
   GetComponentPods,
+  GetMetricsComponents,
   GetSchedulerVisualization,
   GetMetricsDashboards,
+  SaveMetricsDashboard,
   KARMADA_COMPONENTS,
   KarmadaComponentKey,
   MetricCatalogItem,
@@ -283,8 +283,8 @@ function buildChartConfigFromCatalog(
 }
 
 const MetricsPage = () => {
-  const queryClient = useQueryClient();
   const { token } = theme.useToken();
+  const queryClient = useQueryClient();
 
   const [activeComponent, setActiveComponent] = useState<KarmadaComponentKey>(
     KARMADA_COMPONENTS[0].key,
@@ -310,6 +310,26 @@ const MetricsPage = () => {
     queryKey: ['metricsDashboards'],
     queryFn: GetMetricsDashboards,
   });
+
+  const { mutate: persistDashboard } = useMutation({
+    mutationFn: SaveMetricsDashboard,
+    onSuccess: (dashboards) => {
+      queryClient.setQueryData(['metricsDashboards'], dashboards);
+    },
+    onError: (error) => {
+      message.error(`Failed to save dashboard: ${(error as Error).message}`);
+    },
+  });
+
+  const { data: componentStatuses } = useQuery({
+    queryKey: ['metricsComponentStatuses'],
+    queryFn: GetMetricsComponents,
+    refetchInterval: 15_000,
+  });
+
+  const activeComponentStatus = componentStatuses?.find(
+    (item) => item.name === activeComponent,
+  );
 
   const editModeRef = useRef(editMode);
   useEffect(() => {
@@ -337,7 +357,13 @@ const MetricsPage = () => {
       committedConfig ? getConfiguredMetricNames(committedConfig) : undefined,
     [committedConfig],
   );
-  const configuredMetricsKey = configuredMetrics?.join(',') ?? 'default';
+  const configuredMetricsKey = committedConfig
+    ? JSON.stringify(
+        committedConfig.panels
+          .filter((panel) => panel.visible)
+          .map((panel) => ({ metricName: panel.metricName, query: panel.query })),
+      )
+    : 'default';
 
   const {
     data: visualizationData,
@@ -355,8 +381,8 @@ const MetricsPage = () => {
       GetSchedulerVisualization(activeComponent, {
         window: defaultWindow,
         pod: visualizationPod,
-        refresh: false,
         metrics: configuredMetrics,
+        panels: committedConfig?.panels,
       }),
     enabled: !!activeComponent,
     refetchInterval: 10_000,
@@ -367,26 +393,6 @@ const MetricsPage = () => {
     queryFn: () => GetComponentPods(activeComponent),
     enabled: !!activeComponent,
     refetchInterval: 10_000,
-  });
-
-  const refreshVisualizationMutation = useMutation({
-    mutationFn: () =>
-      GetSchedulerVisualization(activeComponent, {
-        window: defaultWindow,
-        pod: visualizationPod,
-        refresh: true,
-        metrics: configuredMetrics,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
-          'componentVisualization',
-          activeComponent,
-          visualizationPod,
-          defaultWindow,
-        ],
-      });
-    },
   });
 
   const visualizationRows = useMemo(
@@ -426,7 +432,14 @@ const MetricsPage = () => {
     saveDashboardConfig(config);
     setCommittedConfig(config);
     setDraftConfig(config);
-  }, [activeComponent, committedConfig, draftConfig, visualizationData]);
+    persistDashboard(config);
+  }, [
+    activeComponent,
+    committedConfig,
+    draftConfig,
+    visualizationData,
+    persistDashboard,
+  ]);
 
   useEffect(() => {
     if (hasInitializedPodSelection || visualizationPods.length === 0) return;
@@ -458,6 +471,7 @@ const MetricsPage = () => {
     setDraftConfig(config);
     if (!editMode) {
       setCommittedConfig(config);
+      persistDashboard(config);
     }
   };
 
@@ -467,6 +481,7 @@ const MetricsPage = () => {
     setDraftConfig(updated);
     if (!editMode) {
       setCommittedConfig(updated);
+      persistDashboard(updated);
     }
   };
 
@@ -476,13 +491,20 @@ const MetricsPage = () => {
     setDraftConfig(updated);
     if (!editMode) {
       setCommittedConfig(updated);
+      persistDashboard(updated);
     }
   };
 
   const handleResetConfig = () => {
     resetDashboardConfig(activeComponent);
-    setCommittedConfig(null);
-    setDraftConfig(null);
+    const config = buildDefaultConfig(
+      activeComponent,
+      visualizationData?.metricsCatalog ?? [],
+    );
+    saveDashboardConfig(config);
+    setCommittedConfig(config);
+    setDraftConfig(config);
+    persistDashboard(config);
     setEditMode(false);
   };
 
@@ -513,9 +535,10 @@ const MetricsPage = () => {
     if (draftConfig) {
       saveDashboardConfig(draftConfig);
       setCommittedConfig(draftConfig);
+      persistDashboard(draftConfig);
     }
     setEditMode(false);
-  }, [draftConfig]);
+  }, [draftConfig, persistDashboard]);
 
   // Copy the active component layout so it can be reviewed or pasted into the
   // dashboard ConfigMap. Draft edits take precedence while edit mode is open.
@@ -565,8 +588,15 @@ const MetricsPage = () => {
       saveDashboardConfig(updated);
       setDraftConfig(updated);
       setCommittedConfig(updated);
+      persistDashboard(updated);
     },
-    [draftConfig, committedConfig, activeComponent, visualizationData],
+    [
+      draftConfig,
+      committedConfig,
+      activeComponent,
+      visualizationData,
+      persistDashboard,
+    ],
   );
 
   // DnD sensors with activation constraint to prevent accidental drags
@@ -1054,15 +1084,6 @@ const MetricsPage = () => {
           </div>
 
           <div className={styles.heroActions}>
-            <AntTooltip title="Refresh now">
-              <Button
-                icon={<Icons.spinner size={14} />}
-                size="middle"
-                className={styles.refreshButton}
-                loading={refreshVisualizationMutation.isPending}
-                onClick={() => refreshVisualizationMutation.mutate()}
-              />
-            </AntTooltip>
             <DashboardToolbar
               editMode={editMode}
               hasCustomConfig={!!committedConfig}
@@ -1160,6 +1181,16 @@ const MetricsPage = () => {
           </div>
         </Card>
 
+        {activeComponentStatus &&
+        activeComponentStatus.healthyTargets < activeComponentStatus.totalTargets ? (
+          <Alert
+            type={activeComponentStatus.healthyTargets > 0 ? 'warning' : 'error'}
+            className={styles.inlineAlert}
+            title="Prometheus target health"
+            description={`${activeComponentStatus.healthyTargets}/${activeComponentStatus.totalTargets} targets are healthy for ${activeComponentLabel}.`}
+          />
+        ) : null}
+
         <section className={styles.summaryGrid}>
           <div className={styles.summaryItem}>
             <Text className={styles.summaryLabel}>Panels</Text>
@@ -1197,14 +1228,6 @@ const MetricsPage = () => {
               className={styles.inlineAlert}
               title={`Failed to load ${activeComponent} visualization`}
               description={visualizationErrorDescription}
-              action={
-                <Button
-                  size="small"
-                  onClick={() => refreshVisualizationMutation.mutate()}
-                >
-                  Retry now
-                </Button>
-              }
             />
           ) : isNoDataError ? (
             <Card
@@ -1215,14 +1238,7 @@ const MetricsPage = () => {
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description="No metrics available in the selected window. Wait for new samples or switch pod scope."
-              >
-                <Button
-                  size="small"
-                  onClick={() => refreshVisualizationMutation.mutate()}
-                >
-                  Refresh
-                </Button>
-              </Empty>
+              />
             </Card>
           ) : (
             <div className="space-y-4">

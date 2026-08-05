@@ -31,7 +31,7 @@ podDisruptionBudget: &podDisruptionBudget { }
 ## @param dashboardConfig.metricsDashboards metrics panels displayed for each Karmada component
 dashboardConfig:
   metricsDashboards:
-    - version: 1
+    - version: 2
       component: karmada-scheduler
       panels:
         - id: karmada-scheduler-01
@@ -94,7 +94,7 @@ dashboardConfig:
           title: Workqueue Longest Running Processor Seconds
           visible: true
           order: 9
-    - version: 1
+    - version: 2
       component: karmada-controller-manager
       panels:
         - id: karmada-controller-manager-01
@@ -169,76 +169,7 @@ dashboardConfig:
           title: Resource Apply Policy Duration Seconds
           visible: true
           order: 11
-    - version: 1
-      component: karmada-agent
-      panels:
-        - id: karmada-agent-01
-          metric_name: cluster_ready_state
-          chart_type: gauge
-          title: Cluster Ready State
-          visible: true
-          order: 0
-        - id: karmada-agent-02
-          metric_name: cluster_ready_node_number
-          chart_type: gauge
-          title: Cluster Ready Node Number
-          visible: true
-          order: 1
-        - id: karmada-agent-03
-          metric_name: cluster_node_number
-          chart_type: gauge
-          title: Cluster Node Number
-          visible: true
-          order: 2
-        - id: karmada-agent-04
-          metric_name: cluster_cpu_allocatable_number
-          chart_type: gauge
-          title: Cluster Cpu Allocatable Number
-          visible: true
-          order: 3
-        - id: karmada-agent-05
-          metric_name: cluster_cpu_allocated_number
-          chart_type: gauge
-          title: Cluster Cpu Allocated Number
-          visible: true
-          order: 4
-        - id: karmada-agent-06
-          metric_name: cluster_memory_allocatable_bytes
-          chart_type: area
-          title: Cluster Memory Allocatable Bytes
-          visible: true
-          order: 5
-        - id: karmada-agent-07
-          metric_name: cluster_memory_allocated_bytes
-          chart_type: area
-          title: Cluster Memory Allocated Bytes
-          visible: true
-          order: 6
-        - id: karmada-agent-08
-          metric_name: cluster_pod_allocatable_number
-          chart_type: gauge
-          title: Cluster Pod Allocatable Number
-          visible: true
-          order: 7
-        - id: karmada-agent-09
-          metric_name: cluster_pod_allocated_number
-          chart_type: gauge
-          title: Cluster Pod Allocated Number
-          visible: true
-          order: 8
-        - id: karmada-agent-10
-          metric_name: cluster_sync_status_duration_seconds
-          chart_type: bar
-          title: Cluster Sync Status Duration Seconds
-          visible: true
-          order: 9
-        - id: karmada-agent-11
-          metric_name: workqueue_depth
-          chart_type: gauge
-          title: Workqueue Depth
-          visible: true
-          order: 10
-    - version: 1
+    - version: 2
       component: karmada-aggregated-apiserver
       panels:
         - id: karmada-aggregated-apiserver-01
@@ -313,7 +244,7 @@ dashboardConfig:
           title: Apiserver Delegated Authz Request Duration Seconds
           visible: true
           order: 11
-    - version: 1
+    - version: 2
       component: karmada-apiserver
       panels:
         - id: karmada-apiserver-01
@@ -388,7 +319,7 @@ dashboardConfig:
           title: Apiserver Tls Handshake Errors Total
           visible: true
           order: 11
-    - version: 1
+    - version: 2
       component: karmada-descheduler
       panels:
         - id: karmada-descheduler-01
@@ -439,7 +370,7 @@ dashboardConfig:
           title: Workqueue Unfinished Work Seconds
           visible: true
           order: 7
-    - version: 1
+    - version: 2
       component: karmada-kube-controller-manager
       panels:
         - id: karmada-kube-controller-manager-01
@@ -502,7 +433,7 @@ dashboardConfig:
           title: Workqueue Unfinished Work Seconds
           visible: true
           order: 9
-    - version: 1
+    - version: 2
       component: karmada-metrics-adapter
       panels:
         - id: karmada-metrics-adapter-01
@@ -559,88 +490,34 @@ dashboardConfig:
           title: Workqueue Retries Total
           visible: true
           order: 8
-    - version: 1
-      component: karmada-scheduler-estimator-member1
+    - version: 2
+      component: karmada-scheduler-estimator
       panels:
-        - id: karmada-scheduler-estimator-member1-01
+        - id: karmada-scheduler-estimator-01
           metric_name: karmada_scheduler_estimator_estimating_request_total
           chart_type: line
           title: Karmada Scheduler Estimator Estimating Request Total
           visible: true
           order: 0
-        - id: karmada-scheduler-estimator-member1-02
+        - id: karmada-scheduler-estimator-02
           metric_name: karmada_scheduler_estimator_estimating_algorithm_duration_seconds
           chart_type: bar
           title: Karmada Scheduler Estimator Estimating Algorithm Duration Seconds
           visible: true
           order: 1
-        - id: karmada-scheduler-estimator-member1-03
+        - id: karmada-scheduler-estimator-03
           metric_name: karmada_scheduler_estimator_estimating_plugin_execution_duration_seconds
           chart_type: bar
           title: Karmada Scheduler Estimator Estimating Plugin Execution Duration Seconds
           visible: true
           order: 2
-        - id: karmada-scheduler-estimator-member1-04
+        - id: karmada-scheduler-estimator-04
           metric_name: karmada_scheduler_estimator_estimating_plugin_extension_point_duration_seconds
           chart_type: bar
           title: Karmada Scheduler Estimator Estimating Plugin Extension Point Duration Seconds
           visible: true
           order: 3
-    - version: 1
-      component: karmada-scheduler-estimator-member2
-      panels:
-        - id: karmada-scheduler-estimator-member2-01
-          metric_name: karmada_scheduler_estimator_estimating_request_total
-          chart_type: line
-          title: Karmada Scheduler Estimator Estimating Request Total
-          visible: true
-          order: 0
-        - id: karmada-scheduler-estimator-member2-02
-          metric_name: karmada_scheduler_estimator_estimating_algorithm_duration_seconds
-          chart_type: bar
-          title: Karmada Scheduler Estimator Estimating Algorithm Duration Seconds
-          visible: true
-          order: 1
-        - id: karmada-scheduler-estimator-member2-03
-          metric_name: karmada_scheduler_estimator_estimating_plugin_execution_duration_seconds
-          chart_type: bar
-          title: Karmada Scheduler Estimator Estimating Plugin Execution Duration Seconds
-          visible: true
-          order: 2
-        - id: karmada-scheduler-estimator-member2-04
-          metric_name: karmada_scheduler_estimator_estimating_plugin_extension_point_duration_seconds
-          chart_type: bar
-          title: Karmada Scheduler Estimator Estimating Plugin Extension Point Duration Seconds
-          visible: true
-          order: 3
-    - version: 1
-      component: karmada-scheduler-estimator-member3
-      panels:
-        - id: karmada-scheduler-estimator-member3-01
-          metric_name: karmada_scheduler_estimator_estimating_request_total
-          chart_type: line
-          title: Karmada Scheduler Estimator Estimating Request Total
-          visible: true
-          order: 0
-        - id: karmada-scheduler-estimator-member3-02
-          metric_name: karmada_scheduler_estimator_estimating_algorithm_duration_seconds
-          chart_type: bar
-          title: Karmada Scheduler Estimator Estimating Algorithm Duration Seconds
-          visible: true
-          order: 1
-        - id: karmada-scheduler-estimator-member3-03
-          metric_name: karmada_scheduler_estimator_estimating_plugin_execution_duration_seconds
-          chart_type: bar
-          title: Karmada Scheduler Estimator Estimating Plugin Execution Duration Seconds
-          visible: true
-          order: 2
-        - id: karmada-scheduler-estimator-member3-04
-          metric_name: karmada_scheduler_estimator_estimating_plugin_extension_point_duration_seconds
-          chart_type: bar
-          title: Karmada Scheduler Estimator Estimating Plugin Extension Point Duration Seconds
-          visible: true
-          order: 3
-    - version: 1
+    - version: 2
       component: karmada-search
       panels:
         - id: karmada-search-01
@@ -715,7 +592,7 @@ dashboardConfig:
           title: Workqueue Depth
           visible: true
           order: 11
-    - version: 1
+    - version: 2
       component: karmada-webhook
       panels:
         - id: karmada-webhook-01
@@ -972,7 +849,7 @@ kubernetes_dashboard_api:
 metrics_scraper:
   ## @param metrics_scraper.labels labels of the metrics-scraper deployment
   labels: {}
-  replicaCount: 1
+  replicaCount: 2
   ## @param metrics_scraper.podAnnotations annotations of the metrics-scraper pods
   podAnnotations: { }
   ## @param metrics_scraper.podLabels labels of the metrics-scraper pods
@@ -1023,6 +900,143 @@ metrics_scraper:
   kubeconfigName: karmada-kubeconfig
   ## @param metrics_scraper.kubeconfigContext context name used in the Karmada kubeconfig
   kubeconfigContext: karmada-apiserver
+  ## Prometheus query and managed storage configuration.
+  prometheus:
+    ## managed deploys a lightweight Prometheus StatefulSet; external only configures the query API.
+    mode: managed
+    queryTimeout: 15s
+    maxQueryRange: 168h
+    managed:
+      image:
+        registry: docker.io
+        repository: prom/prometheus
+        tag: v3.5.0
+        pullPolicy: IfNotPresent
+      targetNamespace: karmada-system
+      scrapeInterval: 15s
+      retention: 7d
+      podSecurityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
+      securityContext: { }
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 1Gi
+      storage:
+        type: pvc
+        size: 10Gi
+        storageClassName: ""
+    external:
+      url: ""
+      bearerTokenSecret:
+        name: ""
+        key: token
+      tlsSecret:
+        name: ""
+        caKey: ca.crt
+        certKey: ""
+        keyKey: ""
+      serverName: ""
+      insecureSkipVerify: false
+  ## Declarative control-plane scrape targets. karmada-agent is intentionally disabled.
+  components:
+    karmada-scheduler:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-scheduler
+      port: "8080"
+      scheme: http
+      path: /metrics
+    karmada-controller-manager:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-controller-manager
+      port: "8080"
+      scheme: http
+      path: /metrics
+    karmada-scheduler-estimator:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-scheduler-estimator-(.+)
+      memberClusterLabel: true
+      port: "8080"
+      scheme: http
+      path: /metrics
+    karmada-aggregated-apiserver:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-aggregated-apiserver
+      port: "443"
+      scheme: https
+      path: /metrics
+      serverName: karmada-aggregated-apiserver.{{ .Values.metrics_scraper.prometheus.managed.targetNamespace }}.svc
+    karmada-apiserver:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-apiserver
+      port: "5443"
+      scheme: https
+      path: /metrics
+      serverName: karmada-apiserver.{{ .Values.metrics_scraper.prometheus.managed.targetNamespace }}.svc
+    karmada-descheduler:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-descheduler
+      port: "8080"
+      scheme: http
+      path: /metrics
+    karmada-kube-controller-manager:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: kube-controller-manager
+      port: "10257"
+      scheme: https
+      path: /metrics
+      insecureSkipVerify: true
+    karmada-metrics-adapter:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-metrics-adapter
+      port: "8080"
+      scheme: http
+      path: /metrics
+    karmada-search:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-search
+      port: "443"
+      scheme: https
+      path: /metrics
+      serverName: karmada-search.{{ .Values.metrics_scraper.prometheus.managed.targetNamespace }}.svc
+    karmada-webhook:
+      enabled: true
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-webhook
+      port: "8080"
+      scheme: http
+      path: /metrics
+    karmada-agent:
+      enabled: false
+      namespace: ""
+      selectorLabel: app
+      selectorRegex: karmada-agent
+      port: "8080"
+      scheme: http
+      path: /metrics
   ## @param metrics_scraper.podDisruptionBudget
   podDisruptionBudget: *podDisruptionBudget
   podSecurityContext: { }

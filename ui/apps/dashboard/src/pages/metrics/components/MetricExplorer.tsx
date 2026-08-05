@@ -159,7 +159,8 @@ export default function MetricExplorer({
       visible: true,
       query: {
         metric: selectedMetric,
-        aggregation,
+        aggregation: aggregation === 'rate' ? 'sum' : aggregation,
+        transform: aggregation === 'rate' ? 'rate' : 'auto',
         labelFilters: labelFilters.filter((f) => f.key && f.value),
       },
     };

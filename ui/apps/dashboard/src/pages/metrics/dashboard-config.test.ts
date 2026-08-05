@@ -23,6 +23,7 @@ import {
   DEFAULT_METRIC_NAMES_BY_COMPONENT,
   buildDefaultConfig,
   getConfiguredMetricNames,
+  loadDashboardConfig,
   selectDefaultCatalogMetrics,
   serializeComponentDashboardConfig,
   type DashboardConfig,
@@ -31,15 +32,12 @@ import {
 const COMPONENTS = [
   'karmada-scheduler',
   'karmada-controller-manager',
-  'karmada-agent',
   'karmada-aggregated-apiserver',
   'karmada-apiserver',
   'karmada-descheduler',
   'karmada-kube-controller-manager',
   'karmada-metrics-adapter',
-  'karmada-scheduler-estimator-member1',
-  'karmada-scheduler-estimator-member2',
-  'karmada-scheduler-estimator-member3',
+  'karmada-scheduler-estimator',
   'karmada-search',
   'karmada-webhook',
 ] as const;
@@ -151,4 +149,38 @@ test('component export contains only the selected dashboard', () => {
   assert.deepEqual(JSON.parse(serializeComponentDashboardConfig(config)), {
     metrics_dashboards: [config],
   });
+});
+
+test('v1 dashboard queries migrate to v2 transforms', () => {
+  const values = new Map<string, string>();
+  values.set(
+    'karmada-metrics-dashboard:karmada-scheduler',
+    JSON.stringify({
+      version: 1,
+      component: 'karmada-scheduler',
+      panels: [
+        {
+          id: 'workqueue-rate',
+          metricName: 'workqueue_adds_total',
+          chartType: 'line',
+          title: 'Workqueue Adds',
+          visible: true,
+          query: { metric: 'workqueue_adds_total', aggregation: 'rate' },
+        },
+      ],
+    }),
+  );
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    },
+  });
+
+  const migrated = loadDashboardConfig('karmada-scheduler');
+  assert.equal(migrated?.version, 2);
+  assert.equal(migrated?.panels[0]?.query?.aggregation, 'sum');
+  assert.equal(migrated?.panels[0]?.query?.transform, 'rate');
 });

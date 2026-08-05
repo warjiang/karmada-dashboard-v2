@@ -1,4 +1,18 @@
 {{- $name := include "karmada-dashboard.name" . -}}
+{{- $prometheusMode := .Values.metrics_scraper.prometheus.mode -}}
+{{- if not (has $prometheusMode (list "managed" "external")) -}}
+{{- fail "metrics_scraper.prometheus.mode must be managed or external" -}}
+{{- end -}}
+{{- $enabledComponents := list -}}
+{{- range $componentName, $component := .Values.metrics_scraper.components -}}
+{{- if $component.enabled -}}
+{{- $enabledComponents = append $enabledComponents $componentName -}}
+{{- end -}}
+{{- end -}}
+{{- $prometheusURL := printf "http://%s-prometheus:9090" $name -}}
+{{- if eq $prometheusMode "external" -}}
+{{- $prometheusURL = required "metrics_scraper.prometheus.external.url is required in external mode" .Values.metrics_scraper.prometheus.external.url -}}
+{{- end -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -66,18 +80,62 @@ spec:
             - name: kubeconfig-secret
               subPath: kubeconfig
               mountPath: /etc/kubeconfig
+            {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.bearerTokenSecret.name }}
+            - name: prometheus-bearer-token
+              subPath: {{ .Values.metrics_scraper.prometheus.external.bearerTokenSecret.key }}
+              mountPath: /etc/prometheus-external/token
+              readOnly: true
+            {{- end }}
+            {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.tlsSecret.name }}
+            - name: prometheus-tls
+              mountPath: /etc/prometheus-external/tls
+              readOnly: true
+            {{- end }}
           command:
             - karmada-dashboard-metrics-scraper
-            - --karmada-kubeconfig=/etc/kubeconfig
-            - --karmada-context={{ .Values.metrics_scraper.kubeconfigContext }}
             - --kubeconfig=/etc/kubeconfig
             - --context={{ .Values.metrics_scraper.kubeconfigContext }}
             - --insecure-bind-address=0.0.0.0
             - --bind-address=0.0.0.0
+            - --namespace={{ include "karmada-dashboard.namespace" . }}
+            - --prometheus-url={{ $prometheusURL }}
+            - --prometheus-query-timeout={{ .Values.metrics_scraper.prometheus.queryTimeout }}
+            - --prometheus-max-query-range={{ .Values.metrics_scraper.prometheus.maxQueryRange }}
+            - --metrics-components={{ join "," $enabledComponents }}
+            {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.bearerTokenSecret.name }}
+            - --prometheus-bearer-token-file=/etc/prometheus-external/token
+            {{- end }}
+            {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.tlsSecret.name }}
+            {{- if .Values.metrics_scraper.prometheus.external.tlsSecret.caKey }}
+            - --prometheus-ca-file=/etc/prometheus-external/tls/{{ .Values.metrics_scraper.prometheus.external.tlsSecret.caKey }}
+            {{- end }}
+            {{- if .Values.metrics_scraper.prometheus.external.tlsSecret.certKey }}
+            - --prometheus-client-cert-file=/etc/prometheus-external/tls/{{ .Values.metrics_scraper.prometheus.external.tlsSecret.certKey }}
+            - --prometheus-client-key-file=/etc/prometheus-external/tls/{{ required "metrics_scraper.prometheus.external.tlsSecret.keyKey is required with certKey" .Values.metrics_scraper.prometheus.external.tlsSecret.keyKey }}
+            {{- else if .Values.metrics_scraper.prometheus.external.tlsSecret.keyKey }}
+            {{- fail "metrics_scraper.prometheus.external.tlsSecret.certKey is required with keyKey" }}
+            {{- end }}
+            {{- end }}
+            {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.serverName }}
+            - --prometheus-server-name={{ .Values.metrics_scraper.prometheus.external.serverName }}
+            {{- end }}
+            {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.insecureSkipVerify }}
+            - --prometheus-insecure-tls=true
+            {{- end }}
       volumes:
         - name: kubeconfig-secret
           secret:
             secretName: {{ .Values.metrics_scraper.kubeconfigName }}
+        {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.bearerTokenSecret.name }}
+        - name: prometheus-bearer-token
+          secret:
+            secretName: {{ .Values.metrics_scraper.prometheus.external.bearerTokenSecret.name }}
+        {{- end }}
+        {{- if and (eq .Values.metrics_scraper.prometheus.mode "external") .Values.metrics_scraper.prometheus.external.tlsSecret.name }}
+        - name: prometheus-tls
+          secret:
+            secretName: {{ .Values.metrics_scraper.prometheus.external.tlsSecret.name }}
+        {{- end }}
       {{- with .Values.metrics_scraper.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

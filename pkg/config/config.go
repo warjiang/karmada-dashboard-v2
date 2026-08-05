@@ -34,18 +34,26 @@ import (
 var dashboardConfig DashboardConfig
 
 const (
-	configName      = "karmada-dashboard-configmap"
-	configNamespace = "karmada-system"
-	defaultEnvName  = "prod"
+	configName     = "karmada-dashboard-configmap"
+	defaultEnvName = "prod"
 )
 
 var (
-	configmapGVR = schema.GroupVersionResource{
+	configNamespace = "karmada-system"
+	configmapGVR    = schema.GroupVersionResource{
 		Group:    "",
 		Version:  "v1",
 		Resource: "configmaps",
 	}
 )
+
+// SetNamespace selects the namespace containing the Dashboard ConfigMap.
+// It must be called during process startup before config informers are created.
+func SetNamespace(namespace string) {
+	if namespace != "" {
+		configNamespace = namespace
+	}
+}
 
 // GetConfigKey returns the configuration key based on the environment name.
 func GetConfigKey() string {

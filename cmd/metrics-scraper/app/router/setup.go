@@ -17,14 +17,21 @@ limitations under the License.
 package router
 
 import (
+	"context"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/pkg/environment"
 )
 
 var (
-	router *gin.Engine
-	v1     *gin.RouterGroup
+	router     *gin.Engine
+	v2         *gin.RouterGroup
+	readyMu    sync.RWMutex
+	readyCheck func(context.Context) error
 )
 
 func init() {
@@ -34,19 +41,37 @@ func init() {
 
 	router = gin.Default()
 	_ = router.SetTrustedProxies(nil)
-	v1 = router.Group("/api/v1")
+	v2 = router.Group("/api/v2")
 
 	router.GET("/livez", func(c *gin.Context) {
 		c.String(200, "livez")
 	})
 	router.GET("/readyz", func(c *gin.Context) {
-		c.String(200, "readyz")
+		readyMu.RLock()
+		check := readyCheck
+		readyMu.RUnlock()
+		if check != nil {
+			ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+			defer cancel()
+			if err := check(ctx); err != nil {
+				c.String(http.StatusServiceUnavailable, "Prometheus is not ready: %v", err)
+				return
+			}
+		}
+		c.String(http.StatusOK, "readyz")
 	})
 }
 
-// V1 returns the router group for /api/v1.
-func V1() *gin.RouterGroup {
-	return v1
+// SetReadinessCheck installs an external dependency readiness check.
+func SetReadinessCheck(check func(context.Context) error) {
+	readyMu.Lock()
+	readyCheck = check
+	readyMu.Unlock()
+}
+
+// V2 returns the v2 API router group.
+func V2() *gin.RouterGroup {
+	return v2
 }
 
 // Router returns the main Gin engine instance.

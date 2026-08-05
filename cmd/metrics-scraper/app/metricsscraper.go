@@ -19,7 +19,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/karmada-io/karmada/pkg/sharedcli/klogflag"
@@ -28,9 +27,9 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/options"
+	promapi "github.com/karmada-io/dashboard/cmd/metrics-scraper/app/prometheus"
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/router"
 	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/routes/metrics"
-	"github.com/karmada-io/dashboard/cmd/metrics-scraper/app/scrape"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"
@@ -41,7 +40,7 @@ func NewMetricsScraperCommand(ctx context.Context) *cobra.Command {
 	opts := options.NewOptions()
 	cmd := &cobra.Command{
 		Use:  "karmada-dashboard-metrics-scraper",
-		Long: `The karmada-dashboard-metrics-scraper responsible for scraping and visualizing the metrics of karmada components. `,
+		Long: `The karmada-dashboard-metrics-scraper serves a stateless, Prometheus-backed metrics query API.`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := run(ctx, opts); err != nil {
 				return err
@@ -68,18 +67,13 @@ func NewMetricsScraperCommand(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().AddFlagSet(genericFlagSet)
 	cmd.Flags().AddFlagSet(logsFlagSet)
+	cmd.AddCommand(newPreparePrometheusConfigCommand())
 	return cmd
 }
 
 func run(ctx context.Context, opts *options.Options) error {
-	klog.InfoS("Starting Karmada Dashboard API", "version", environment.Version)
-
-	client.InitKarmadaConfig(
-		client.WithUserAgent(environment.UserAgent()),
-		client.WithKubeconfig(opts.KarmadaKubeConfig),
-		client.WithKubeContext(opts.KarmadaContext),
-		client.WithInsecureTLSSkipVerify(opts.SkipKarmadaApiserverTLSVerify),
-	)
+	klog.InfoS("Starting Karmada Dashboard metrics API", "version", environment.Version)
+	config.SetNamespace(opts.Namespace)
 
 	client.InitKubeConfig(
 		client.WithUserAgent(environment.UserAgent()),
@@ -87,17 +81,28 @@ func run(ctx context.Context, opts *options.Options) error {
 		client.WithKubeContext(opts.KubeContext),
 		client.WithInsecureTLSSkipVerify(opts.SkipKubeApiserverTLSVerify),
 	)
-	ensureAPIServerConnectionOrDie()
-	serve(opts)
-	scrapeInterval := opts.ScrapeInterval
-	if scrapeInterval <= 0 {
-		scrapeInterval = 10 * time.Second
+	prometheusClient, err := promapi.NewClient(promapi.Config{
+		Address:         opts.PrometheusURL,
+		Timeout:         opts.PrometheusQueryTimeout,
+		BearerTokenFile: opts.PrometheusBearerTokenFile,
+		CAFile:          opts.PrometheusCAFile,
+		CertFile:        opts.PrometheusCertFile,
+		KeyFile:         opts.PrometheusKeyFile,
+		ServerName:      opts.PrometheusServerName,
+		InsecureTLS:     opts.PrometheusInsecureTLS,
+	})
+	if err != nil {
+		return fmt.Errorf("initialize Prometheus client: %w", err)
 	}
-	go scrape.InitDatabase(scrapeInterval)
+	metrics.Configure(prometheusClient, opts.MetricsComponents, opts.PrometheusQueryTimeout, opts.PrometheusMaxQueryRange)
+	router.SetReadinessCheck(func(checkCtx context.Context) error {
+		_, _, checkErr := prometheusClient.Query(checkCtx, "vector(1)", time.Now())
+		return checkErr
+	})
+	serve(opts)
 
 	config.InitDashboardConfig(client.InClusterClient(), ctx.Done())
 	<-ctx.Done()
-	os.Exit(0)
 	return nil
 }
 
@@ -109,40 +114,33 @@ func serve(opts *options.Options) {
 	}()
 }
 
-func ensureAPIServerConnectionOrDie() {
-	versionInfo, err := client.InClusterClient().Discovery().ServerVersion()
-	if err != nil {
-		klog.Fatalf("Error while initializing connection to Kubernetes apiserver. "+
-			"This most likely means that the cluster is misconfigured. Reason: %s\n", err)
-		os.Exit(1)
-	}
-	klog.InfoS("Successful initial request to the Kubernetes apiserver", "version", versionInfo.String())
-
-	karmadaVersionInfo, err := client.InClusterKarmadaClient().Discovery().ServerVersion()
-	if err != nil {
-		klog.Fatalf("Error while initializing connection to Karmada apiserver. "+
-			"This most likely means that the cluster is misconfigured. Reason: %s\n", err)
-		os.Exit(1)
-	}
-	klog.InfoS("Successful initial request to the Karmada apiserver", "version", karmadaVersionInfo.String())
-}
-
 func init() {
-	r := router.V1()
-	r.GET("/metrics", metrics.GetMetrics)
-	r.GET("/metrics/:app_name", metrics.GetMetrics)
-	r.GET("/metrics/:app_name/visualization", metrics.GetVisualization)
-	r.GET("/metrics/:app_name/explore", metrics.GetMetricExplore)
-	r.GET("/metrics/:app_name/pods", metrics.GetComponentPods)
-	r.GET("/metrics/:app_name/:pod_name", metrics.QueryMetrics)
-	r.GET("/metrics-config", metrics.GetDashboardConfig)
-	r.PUT("/metrics-config", metrics.SaveDashboardConfig)
+	r := router.V2().Group("/metrics")
+	r.GET("/components", metrics.GetComponents)
+	r.GET("/catalog", metrics.GetCatalog)
+	r.GET("/label-values", metrics.GetLabelValues)
+	r.POST("/query-range", metrics.QueryRange)
+	r.GET("/dashboards", metrics.GetDashboardConfig)
+	r.PUT("/dashboards", metrics.SaveDashboardConfig)
 }
 
-// http://localhost:8000/api/v1/metrics/karmada-scheduler?type=metricsdetails  //from sqlite details bar
-
-// http://localhost:8000/api/v1/metrics/karmada-scheduler/karmada-scheduler-7bd4659f9f-hh44f?type=details&mname=workqueue_queue_duration_seconds
-
-// http://localhost:8000/api/v1/metrics?type=sync_off // to skip all metrics
-
-// http://localhost:8000/api/v1/metrics/karmada-scheduler?type=sync_off // to skip specific metrics
+func newPreparePrometheusConfigCommand() *cobra.Command {
+	var kubeconfigPath, contextName, templatePath, outputPath, credentialsDir string
+	cmd := &cobra.Command{
+		Use:   "prepare-prometheus-config",
+		Short: "Render Prometheus scrape configuration from a Karmada kubeconfig",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return promapi.PrepareConfig(kubeconfigPath, contextName, templatePath, outputPath, credentialsDir)
+		},
+	}
+	cmd.Flags().StringVar(&kubeconfigPath, "kubeconfig", "", "Karmada kubeconfig path")
+	cmd.Flags().StringVar(&contextName, "context", "", "Karmada kubeconfig context")
+	cmd.Flags().StringVar(&templatePath, "template", "", "Prometheus configuration template")
+	cmd.Flags().StringVar(&outputPath, "output", "", "Rendered Prometheus configuration path")
+	cmd.Flags().StringVar(&credentialsDir, "credentials-dir", "", "Directory for normalized credentials")
+	_ = cmd.MarkFlagRequired("kubeconfig")
+	_ = cmd.MarkFlagRequired("template")
+	_ = cmd.MarkFlagRequired("output")
+	_ = cmd.MarkFlagRequired("credentials-dir")
+	return cmd
+}
